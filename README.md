@@ -8,7 +8,7 @@ Reacts to [prose](https://gitlab.com/konradodwrot/prose) releases: a prose tag t
 
 ## Dependency graph
 
-Each repo declares its own surface in `.repo/cross-repo-interface.yml` (`upstream:` consumed `<repo>/<artifact>` vertices, optionally `{consumes, into}` when a dependency embeds into a specific artifact, then `downstream:` produced artifacts). `scripts/aggregate/aggregate.zsh` fetches every declaration (raw GitLab API, no clones), merges them over `deps/seed-interfaces.yml` (bootstrap entries for repos not declaring yet), and renders `deps/deps-graph.yml`: generated, committed for readability, drift-checked in CI, never hand-edited. A consumed artifact nobody produces fails aggregation.
+Each repo declares its own surface in `.repo/cross-repo-interface.yml`: `upstream:` consumed `<repo>/<artifact>` vertices (repo-level consumption: pipeline, worktree), `edges:` a map of upstream vertex to the list of this repo's artifacts it lands in (`go-modules/lib: [che]`), then `downstream:` produced artifacts (`name` + `type`). `scripts/aggregate/aggregate.zsh` fetches every declaration (raw GitLab API, no clones), merges them over `deps/seed-interfaces.yml` (bootstrap entries for repos not declaring yet), and renders `deps/deps-graph.yml`: generated, committed for readability, drift-checked in CI, never hand-edited. A consumed artifact nobody produces, or an edge into an artifact the repo does not produce, fails aggregation.
 
 ## Workspace assembly
 

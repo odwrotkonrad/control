@@ -39,90 +39,80 @@ repositories:
   - repo: resume-md-pdf
     artifacts:
       - {name: styled-resume-pdf, type: pdf}
-dependencies:
-  - upstream: configs/llm/claude
-    downstream:
-      - conventions
-      - go-modules
-      - infra/iac
-      - infra/oci-images
-      - infra/sandbox
-      - infra/sandbox/sandbox
-      - notes
-  - upstream: configs/zsh/base-linux
-    downstream:
-      - infra/oci-images/dev-sandbox
-      - infra/sandbox/sandbox
-  - upstream: go-modules/che
-    downstream:
-      - configs
-      - infra/oci-images/ci-linux
-      - infra/oci-images/dev-sandbox
-      - infra/sandbox/sandbox
-  - upstream: go-modules/lib
-    downstream:
-      - go-modules/che
-      - go-modules/get-os-open-files-with
-      - go-modules/get-term-open-files-with
-  - upstream: infra/iac/tf-lock
-    downstream:
-      - infra/oci-images
-  - upstream: infra/oci-images/ci-linux
-    downstream:
-      - configs
-      - control
-      - conventions
-      - go-modules
-      - infra/iac
-      - infra/oci-images
-      - infra/sandbox
-      - notes
-      - prose
-      - resume-md-pdf
-  - upstream: infra/oci-images/ci-linux-dind
-    downstream:
-      - go-modules
-  - upstream: prose/conventions-doc
-    downstream:
-      - configs
-      - control
-      - go-modules
-      - infra/iac
-      - infra/oci-images
-      - infra/sandbox
-      - notes
-      - resume-md-pdf
-  - upstream: prose/doc-templates
-    downstream:
-      - configs
-      - control
-      - go-modules
-      - infra/iac
-      - infra/oci-images
-      - infra/sandbox
-      - notes
-      - resume-md-pdf
-  - upstream: prose/license
-    downstream:
-      - configs
-      - control
-      - go-modules
-      - infra/iac
-      - infra/oci-images
-      - infra/sandbox
-      - notes
-      - resume-md-pdf
-  - upstream: prose/repo-prose
-    downstream:
-      - configs
-      - control
-      - go-modules
-      - infra/iac
-      - infra/oci-images
-      - infra/sandbox
-      - notes
-      - resume-md-pdf
-  - upstream: prose/shared-prose
-    downstream:
-      - control
+edges:
+  configs/llm/claude:
+    - conventions
+    - go-modules
+    - infra/iac
+    - infra/oci-images
+    - infra/sandbox
+    - infra/sandbox/sandbox
+    - notes
+  configs/zsh/base-linux:
+    - infra/oci-images/dev-sandbox
+    - infra/sandbox/sandbox
+  control/workspace:
+    - configs
+  go-modules/che:
+    - configs
+    - infra/oci-images/ci-linux
+    - infra/oci-images/dev-sandbox
+    - infra/sandbox/sandbox
+  go-modules/lib:
+    - go-modules/che
+    - go-modules/get-os-open-files-with
+    - go-modules/get-term-open-files-with
+  infra/iac/tf-lock:
+    - infra/oci-images
+  infra/oci-images/ci-linux:
+    - configs
+    - control
+    - conventions
+    - go-modules
+    - infra/iac
+    - infra/oci-images
+    - infra/sandbox
+    - notes
+    - prose
+    - resume-md-pdf
+  infra/oci-images/ci-linux-dind:
+    - go-modules
+  prose/conventions-doc:
+    - configs
+    - control
+    - go-modules
+    - infra/iac
+    - infra/oci-images
+    - infra/sandbox
+    - notes
+    - resume-md-pdf
+  prose/doc-templates:
+    - configs
+    - control
+    - go-modules
+    - infra/iac
+    - infra/oci-images
+    - infra/sandbox
+    - notes
+    - resume-md-pdf
+  prose/license:
+    - configs
+    - control
+    - go-modules
+    - infra/iac
+    - infra/oci-images
+    - infra/sandbox
+    - notes
+    - resume-md-pdf
+  prose/repo-prose:
+    - configs
+    - control
+    - go-modules
+    - infra/iac
+    - infra/oci-images
+    - infra/sandbox
+    - notes
+    - resume-md-pdf
+  prose/shared-prose:
+    - control
 ##[<] 🤖

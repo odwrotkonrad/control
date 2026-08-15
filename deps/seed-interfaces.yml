@@ -5,16 +5,17 @@ repos:
       - conventions/conventions-doc
       - go-modules/che
       - infra/oci-images/ci-linux
-      - {consumes: configs/gitlab/projects, into: repo-index}
-      - {consumes: configs/purpose-doc, into: repo-index}
-      - {consumes: conventions/purpose-doc, into: repo-index}
-      - {consumes: go-modules/purpose-doc, into: repo-index}
-      - {consumes: go-modules/che, into: repo-index}
-      - {consumes: infra/iac/purpose-doc, into: repo-index}
-      - {consumes: infra/oci-images/purpose-doc, into: repo-index}
-      - {consumes: infra/sandbox/purpose-doc, into: repo-index}
-      - {consumes: notes/purpose-doc, into: repo-index}
-      - {consumes: resume-md-pdf/purpose-doc, into: repo-index}
+    edges:
+      configs/gitlab/projects: [repo-index]
+      configs/purpose-doc: [repo-index]
+      conventions/purpose-doc: [repo-index]
+      go-modules/purpose-doc: [repo-index]
+      go-modules/che: [repo-index]
+      infra/iac/purpose-doc: [repo-index]
+      infra/oci-images/purpose-doc: [repo-index]
+      infra/sandbox/purpose-doc: [repo-index]
+      notes/purpose-doc: [repo-index]
+      resume-md-pdf/purpose-doc: [repo-index]
     downstream:
       - {name: zsh/base-linux, type: che-profile}
       - {name: llm/claude, type: ai-prose}
@@ -34,9 +35,8 @@ repos:
       - configs/llm/claude
       - infra/oci-images/ci-linux
       - infra/oci-images/ci-linux-dind
-      - {consumes: go-modules/lib, into: che}
-      - {consumes: go-modules/lib, into: get-os-open-files-with}
-      - {consumes: go-modules/lib, into: get-term-open-files-with}
+    edges:
+      go-modules/lib: [che, get-os-open-files-with, get-term-open-files-with]
     downstream:
       - {name: che, type: binary}
       - {name: get-os-open-files-with, type: binary}
@@ -57,9 +57,9 @@ repos:
       - configs/llm/claude
       - infra/iac/tf-lock
       - infra/oci-images/ci-linux
-      - {consumes: go-modules/che, into: ci-linux}
-      - {consumes: go-modules/che, into: dev-sandbox}
-      - {consumes: configs/zsh/base-linux, into: dev-sandbox}
+    edges:
+      go-modules/che: [ci-linux, dev-sandbox]
+      configs/zsh/base-linux: [dev-sandbox]
     downstream:
       - {name: ci-linux, type: oci-image}
       - {name: ci-linux-dind, type: oci-image}
@@ -70,9 +70,10 @@ repos:
       - conventions/conventions-doc
       - configs/llm/claude
       - infra/oci-images/ci-linux
-      - {consumes: configs/llm/claude, into: sandbox}
-      - {consumes: go-modules/che, into: sandbox}
-      - {consumes: configs/zsh/base-linux, into: sandbox}
+    edges:
+      configs/llm/claude: [sandbox]
+      go-modules/che: [sandbox]
+      configs/zsh/base-linux: [sandbox]
     downstream:
       - {name: sandbox, type: oci-image}
       - {name: purpose-doc, type: ai-prose}

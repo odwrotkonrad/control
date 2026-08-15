@@ -51,27 +51,27 @@ for repo in ${(o)candidates}; {
 all_repos=(${(f)"$(yq '.repos | keys | .[]' $tmp/combined.yml)"})
 
 produced=()
+missing=()
 typeset -A edge_downs
 consumed_lines=()
 for repo in ${(o)all_repos}; {
   for name in ${(f)"$(REPO=$repo yq '.repos.[env(REPO)].downstream // [] | .[].name' $tmp/combined.yml)"}; {
     produced+=("$repo/$name")
   }
-  for up in ${(f)"$(REPO=$repo yq '.repos.[env(REPO)].upstream // [] | map(select(tag == "!!str")) | .[]' $tmp/combined.yml)"}; {
+  for up in ${(f)"$(REPO=$repo yq '.repos.[env(REPO)].upstream // [] | .[]' $tmp/combined.yml)"}; {
     edge_downs[$up]+=" $repo"
     consumed_lines+=("$repo $up")
   }
-  for pair in ${(f)"$(REPO=$repo yq '.repos.[env(REPO)].upstream // [] | map(select(tag == "!!map")) | .[] | .consumes + "|" + (.into // "")' $tmp/combined.yml)"}; {
+  for pair in ${(f)"$(REPO=$repo yq '.repos.[env(REPO)].edges // {} | to_entries[] | .key + "|" + (.value | join(","))' $tmp/combined.yml)"}; {
     up=${pair%%\|*}
-    into=${pair#*\|}
-    vertex=$repo
-    [[ -n $into ]] && vertex=$repo/$into
-    edge_downs[$up]+=" $vertex"
-    consumed_lines+=("$repo $up")
+    for artifact in ${(s:,:)${pair#*\|}}; {
+      edge_downs[$up]+=" $repo/$artifact"
+      consumed_lines+=("$repo $up")
+      if (( ! ${produced[(I)$repo/$artifact]} )) missing+=("$repo edge into $artifact, which $repo does not produce")
+    }
   }
 }
 
-missing=()
 for line in $consumed_lines; {
   vertex=${line#* }
   if (( ! ${produced[(I)$vertex]} )) missing+=("${line%% *} consumes $vertex, which no repo produces")
@@ -84,11 +84,10 @@ if (( ${#missing} )) {
 {
   print '##[>] 🤖'
   yq '{"repositories": (.repos | to_entries | sort_by(.key) | map({"repo": .key, "artifacts": (.value.downstream // [])}))}' $tmp/combined.yml
-  print 'dependencies:'
+  print 'edges:'
   for up in ${(ok)edge_downs}; {
-    print "  - upstream: $up"
-    print '    downstream:'
-    for v in ${(ou)${=edge_downs[$up]}}; print "      - $v"
+    print "  $up:"
+    for v in ${(ou)${=edge_downs[$up]}}; print "    - $v"
   }
   print '##[<] 🤖'
 } > $tmp/graph.yml

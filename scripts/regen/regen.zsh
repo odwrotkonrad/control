@@ -3,7 +3,7 @@
 set -euo pipefail
 
 group=konradodwrot
-pin_pattern='@[^ "]*prose[^ "]*#v[0-9]+\.[0-9]+\.[0-9]+'
+pin_pattern='@[^ "]*prose[^ "]*\?ref=v[0-9]+\.[0-9]+\.[0-9]+'
 
 repo="" tag="" prev="" workdir="" dry=0
 zparseopts -D -E -- -repo:=o_repo -tag:=o_tag -prev:=o_prev -workdir:=o_wd -dry-run=o_dry
@@ -24,12 +24,13 @@ if [[ -z $workdir ]] {
   git clone --depth 1 https://control-maintainer:${CONTROL_GITLAB_TOKEN:?}@gitlab.com/$group/$repo.git $workdir
 }
 
-if [[ ! -f $workdir/che.yml ]] {
+spec_files=($workdir/che.yml(N) $workdir/.repo/che.yml(N))
+if (( ! ${#spec_files} )) {
   print "$repo: no che.yml, nothing to regen"
   exit 0
 }
 
-old=$(rg -o "$pin_pattern" $workdir/che.yml | rg -o 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
+old=$(rg -o --no-filename "$pin_pattern" $spec_files 2>/dev/null | rg -o 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
 if [[ -z $old ]] {
   print "$repo: no prose pin in che.yml, nothing to regen"
   exit 0
@@ -62,9 +63,11 @@ if (( dry )) {
 }
 
 cd $workdir
-sed -i '' -E "s|(${pin_pattern%%#*}#)v[0-9]+\.[0-9]+\.[0-9]+|\1$tag|g" che.yml 2>/dev/null \
-  || sed -i -E "s|#$old|#$tag|g" che.yml
-make render-templates
+for f in ${spec_files#$workdir/}; {
+  sed -i.prosebak -E "s|(prose[^ \"]*\?ref=)v[0-9]+\.[0-9]+\.[0-9]+|\1$tag|g" $f
+  command rm -f $f.prosebak
+}
+make render-templates 2>/dev/null || make repo-render-templates
 git checkout -b $branch
 git add -A
 git commit -m "$title"

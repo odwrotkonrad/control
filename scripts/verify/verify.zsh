@@ -10,7 +10,7 @@ zparseopts -D -E -- -graph:=o_graph -produces:=o_prod -consumes:=o_cons -affecte
 (( ${#o_graph} )) && graph=${o_graph[2]}
 
 repos=(${(f)"$(yq '.repositories[].repo' $graph)"})
-edges=(${(f)"$(yq '.dependencies[] | .upstream + " " + (.downstream | join(","))' $graph)"})
+edges=(${(f)"$(yq '.edges // {} | to_entries[] | .key + " " + (.value | join(","))' $graph)"})
 
 vertex_repo() {
   local v=$1

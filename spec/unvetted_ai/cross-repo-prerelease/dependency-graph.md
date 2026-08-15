@@ -7,15 +7,16 @@ dependency edges between them: the supplementary data prerelease preference
 and prose propagation resolve against. A vertex is `repo/artifact`. The graph
 is never hand-maintained: each repo declares its own surface in
 `.repo/cross-repo-interface.yml` (`upstream:` first: consumed vertices as
-`<repo>/<artifact>` strings, or `{consumes: <vertex>, into: <artifact>}` when
-the dependency embeds into a specific produced artifact; then `downstream:`
-produced artifacts as `name:` + `type:`, types so far:
+`<repo>/<artifact>` strings, repo-level consumption; then `edges:`, a map of
+upstream vertex to the list of this repo's artifacts it lands in
+(`go-modules/lib: [che]`); then `downstream:` produced artifacts as
+`name:` + `type:`, types so far:
 `binary | go-module | oci-image | che-profile | ai-prose | lockfile | pdf | dataset`). Aggregation merges all declarations over
 bootstrap seeds (`deps/seed-interfaces.yml`, shrinking as repos declare) and
-renders `deps/deps-graph.yml`: two arrays, `repositories:` (vertices) and
-`dependencies:` (edges grouped by upstream, downstream entries a bare
-`<repo>` when consumed by the repo's pipeline or worktree, `<repo>/<artifact>`
-when embedded). Canonical generated file: `deps/deps-graph.yml`.
+renders `deps/deps-graph.yml`: `repositories:` (vertices) and `edges:`, a map
+of upstream vertex to its downstream vertices, a bare `<repo>` when consumed
+by the repo's pipeline or worktree, `<repo>/<artifact>` when landed in an
+artifact. Canonical generated file: `deps/deps-graph.yml`.
 
 Scenario: a downstream pipeline knows which upstreams to check for prereleases
   Status: todo

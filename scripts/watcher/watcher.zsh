@@ -4,7 +4,7 @@ set -euo pipefail
 
 repo_root=${0:a:h:h:h}
 group=konradodwrot
-pin_pattern='@[^ "]*prose[^ "]*#v[0-9]+\.[0-9]+\.[0-9]+'
+pin_pattern='@[^ "]*prose[^ "]*\?ref=v[0-9]+\.[0-9]+\.[0-9]+'
 state_dir=${XDG_STATE_HOME:-$HOME/.local/state}/prose-watcher
 
 workspace=${repo_root:h} interval=300 once=0
@@ -22,7 +22,7 @@ pass() {
   print "latest prose tag: ${latest:-none}"
   for chefile in $workspace/*/che.yml(N) $workspace/*/*/che.yml(N); {
     repo=${${chefile:h}#$workspace/}
-    pin=$(rg -o "$pin_pattern" $chefile 2>/dev/null | rg -o 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
+    pin=$(rg -o --no-filename "$pin_pattern" $chefile ${chefile:h}/.repo/che.yml(N) 2>/dev/null | rg -o 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
     if [[ -z $pin ]] {
       print "$repo: no prose pin, no-op"
       continue
@@ -33,7 +33,10 @@ pass() {
       print "$repo: pinned $pin, outputs fresh"
     } else {
       print "$repo: pin $pin (last rendered: ${stamp:-never}), refreshing non-checked-out outputs"
-      (cd ${chefile:h} && che render-templates)
+      if ! { (cd ${chefile:h} && che render-templates --profiles=ontoRepo) } {
+        print "$repo: render failed, keeping stamp, skipping"
+        continue
+      }
       tracked=(${(f)"$(git -C ${chefile:h} diff --name-only)"})
       (( ${#tracked} )) && git -C ${chefile:h} checkout -- $tracked
       print $pin > $stamp_file
