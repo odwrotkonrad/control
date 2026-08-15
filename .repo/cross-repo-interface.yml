@@ -1,0 +1,12 @@
+##[>] 🤖🤖
+upstream:
+  - infra/oci-images/ci-linux
+  - prose/conventions-doc
+  - prose/repo-prose
+  - prose/shared-prose
+  - prose/doc-templates
+  - prose/license
+downstream:
+  - {name: deps-graph, type: dataset}
+  - {name: workspace, type: che-profile}
+##[<] 🤖🤖

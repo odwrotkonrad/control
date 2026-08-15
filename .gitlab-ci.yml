@@ -1,0 +1,58 @@
+##[>] 🤖🤖
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "pipeline"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+stages:
+  - validate
+  - verify
+  - regen
+
+variables:
+  CI_IMAGE: registry.gitlab.com/konradodwrot/infra/oci-images/ci-linux:latest
+
+validate-pre-commit-all:
+  stage: validate
+  image: $CI_IMAGE
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "pipeline"
+      when: never
+    - when: on_success
+  script:
+    - make repo-ci-precommit-all
+    - git diff --exit-code HEAD
+
+validate-deps-graph:
+  stage: validate
+  image: $CI_IMAGE
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "pipeline"
+      when: never
+    - when: on_success
+  script:
+    - make aggregate-check
+
+verify-prose-release:
+  stage: verify
+  image: $CI_IMAGE
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "pipeline"
+  script:
+    - scripts/aggregate/aggregate.zsh --out deps/deps-graph.yml
+    - scripts/verify/verify.zsh --emit-pipeline regen-pipeline.yml
+  artifacts:
+    paths:
+      - regen-pipeline.yml
+
+regen-fan-out:
+  stage: regen
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "pipeline"
+  trigger:
+    include:
+      - artifact: regen-pipeline.yml
+        job: verify-prose-release
+    strategy: depend
+##[<] 🤖🤖

@@ -1,0 +1,128 @@
+##[>] 🤖
+repositories:
+  - repo: configs
+    artifacts:
+      - {name: zsh/base-linux, type: che-profile}
+      - {name: llm/claude, type: ai-prose}
+  - repo: control
+    artifacts:
+      - {name: deps-graph, type: dataset}
+      - {name: workspace, type: che-profile}
+  - repo: conventions
+    artifacts: []
+  - repo: go-modules
+    artifacts:
+      - {name: che, type: binary}
+      - {name: get-os-open-files-with, type: binary}
+      - {name: get-term-open-files-with, type: binary}
+      - {name: lib, type: go-module}
+  - repo: infra/iac
+    artifacts:
+      - {name: tf-lock, type: lockfile}
+  - repo: infra/oci-images
+    artifacts:
+      - {name: ci-linux, type: oci-image}
+      - {name: ci-linux-dind, type: oci-image}
+      - {name: dev-sandbox, type: oci-image}
+  - repo: infra/sandbox
+    artifacts:
+      - {name: sandbox, type: oci-image}
+  - repo: notes
+    artifacts: []
+  - repo: prose
+    artifacts:
+      - {name: conventions-doc, type: ai-prose}
+      - {name: repo-prose, type: ai-prose}
+      - {name: shared-prose, type: ai-prose}
+      - {name: doc-templates, type: ai-prose}
+      - {name: license, type: ai-prose}
+  - repo: resume-md-pdf
+    artifacts:
+      - {name: styled-resume-pdf, type: pdf}
+dependencies:
+  - upstream: configs/llm/claude
+    downstream:
+      - conventions
+      - go-modules
+      - infra/iac
+      - infra/oci-images
+      - infra/sandbox
+      - infra/sandbox/sandbox
+      - notes
+  - upstream: configs/zsh/base-linux
+    downstream:
+      - infra/oci-images/dev-sandbox
+      - infra/sandbox/sandbox
+  - upstream: go-modules/che
+    downstream:
+      - configs
+      - infra/oci-images/ci-linux
+      - infra/oci-images/dev-sandbox
+      - infra/sandbox/sandbox
+  - upstream: go-modules/lib
+    downstream:
+      - go-modules/che
+      - go-modules/get-os-open-files-with
+      - go-modules/get-term-open-files-with
+  - upstream: infra/iac/tf-lock
+    downstream:
+      - infra/oci-images
+  - upstream: infra/oci-images/ci-linux
+    downstream:
+      - configs
+      - control
+      - conventions
+      - go-modules
+      - infra/iac
+      - infra/oci-images
+      - infra/sandbox
+      - notes
+      - prose
+      - resume-md-pdf
+  - upstream: infra/oci-images/ci-linux-dind
+    downstream:
+      - go-modules
+  - upstream: prose/conventions-doc
+    downstream:
+      - configs
+      - control
+      - go-modules
+      - infra/iac
+      - infra/oci-images
+      - infra/sandbox
+      - notes
+      - resume-md-pdf
+  - upstream: prose/doc-templates
+    downstream:
+      - configs
+      - control
+      - go-modules
+      - infra/iac
+      - infra/oci-images
+      - infra/sandbox
+      - notes
+      - resume-md-pdf
+  - upstream: prose/license
+    downstream:
+      - configs
+      - control
+      - go-modules
+      - infra/iac
+      - infra/oci-images
+      - infra/sandbox
+      - notes
+      - resume-md-pdf
+  - upstream: prose/repo-prose
+    downstream:
+      - configs
+      - control
+      - go-modules
+      - infra/iac
+      - infra/oci-images
+      - infra/sandbox
+      - notes
+      - resume-md-pdf
+  - upstream: prose/shared-prose
+    downstream:
+      - control
+##[<] 🤖

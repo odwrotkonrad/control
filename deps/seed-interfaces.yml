@@ -1,0 +1,92 @@
+##[>] 🤖🤖
+repos:
+  configs:
+    upstream:
+      - conventions/conventions-doc
+      - go-modules/che
+      - infra/oci-images/ci-linux
+      - {consumes: configs/gitlab/projects, into: repo-index}
+      - {consumes: configs/purpose-doc, into: repo-index}
+      - {consumes: conventions/purpose-doc, into: repo-index}
+      - {consumes: go-modules/purpose-doc, into: repo-index}
+      - {consumes: go-modules/che, into: repo-index}
+      - {consumes: infra/iac/purpose-doc, into: repo-index}
+      - {consumes: infra/oci-images/purpose-doc, into: repo-index}
+      - {consumes: infra/sandbox/purpose-doc, into: repo-index}
+      - {consumes: notes/purpose-doc, into: repo-index}
+      - {consumes: resume-md-pdf/purpose-doc, into: repo-index}
+    downstream:
+      - {name: zsh/base-linux, type: che-profile}
+      - {name: llm/claude, type: ai-prose}
+      - {name: gitlab/projects, type: che-profile}
+      - {name: purpose-doc, type: ai-prose}
+      - {name: repo-index, type: ai-prose}
+  conventions:
+    upstream:
+      - configs/llm/claude
+      - infra/oci-images/ci-linux
+    downstream:
+      - {name: conventions-doc, type: ai-prose}
+      - {name: purpose-doc, type: ai-prose}
+  go-modules:
+    upstream:
+      - conventions/conventions-doc
+      - configs/llm/claude
+      - infra/oci-images/ci-linux
+      - infra/oci-images/ci-linux-dind
+      - {consumes: go-modules/lib, into: che}
+      - {consumes: go-modules/lib, into: get-os-open-files-with}
+      - {consumes: go-modules/lib, into: get-term-open-files-with}
+    downstream:
+      - {name: che, type: binary}
+      - {name: get-os-open-files-with, type: binary}
+      - {name: get-term-open-files-with, type: binary}
+      - {name: lib, type: go-module}
+      - {name: purpose-doc, type: ai-prose}
+  infra/iac:
+    upstream:
+      - conventions/conventions-doc
+      - configs/llm/claude
+      - infra/oci-images/ci-linux
+    downstream:
+      - {name: tf-lock, type: lockfile}
+      - {name: purpose-doc, type: ai-prose}
+  infra/oci-images:
+    upstream:
+      - conventions/conventions-doc
+      - configs/llm/claude
+      - infra/iac/tf-lock
+      - infra/oci-images/ci-linux
+      - {consumes: go-modules/che, into: ci-linux}
+      - {consumes: go-modules/che, into: dev-sandbox}
+      - {consumes: configs/zsh/base-linux, into: dev-sandbox}
+    downstream:
+      - {name: ci-linux, type: oci-image}
+      - {name: ci-linux-dind, type: oci-image}
+      - {name: dev-sandbox, type: oci-image}
+      - {name: purpose-doc, type: ai-prose}
+  infra/sandbox:
+    upstream:
+      - conventions/conventions-doc
+      - configs/llm/claude
+      - infra/oci-images/ci-linux
+      - {consumes: configs/llm/claude, into: sandbox}
+      - {consumes: go-modules/che, into: sandbox}
+      - {consumes: configs/zsh/base-linux, into: sandbox}
+    downstream:
+      - {name: sandbox, type: oci-image}
+      - {name: purpose-doc, type: ai-prose}
+  notes:
+    upstream:
+      - conventions/conventions-doc
+      - configs/llm/claude
+      - infra/oci-images/ci-linux
+    downstream:
+      - {name: purpose-doc, type: ai-prose}
+  resume-md-pdf:
+    upstream:
+      - infra/oci-images/ci-linux
+    downstream:
+      - {name: styled-resume-pdf, type: pdf}
+      - {name: purpose-doc, type: ai-prose}
+##[<] 🤖🤖

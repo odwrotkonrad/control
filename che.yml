@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=https://gitlab.com/konradodwrot/go-modules/-/raw/main/che/assets/data/che.schema.json
+##[>] 🤖🤖
+ontoRepo:
+  options: {autoDiscover: true}
+  include:
+    renderTemplates:
+      - templates:
+          - source: templates/2-data/makefile-agents.md.ontoRepo.tpl
+            dest:
+              - {path: assets/data/makefile.agents.md}
+          - source: templates/2-data/repo-structure.md.ontoRepo.tpl
+            dest:
+              - {path: assets/data/repo-structure.md}
+          - source: templates/3-audience/AGENTS.md.ontoRepo.tpl
+            dest:
+              - {path: CLAUDE.md}
+              - {path: AGENTS.md, options: {renderReferencedFiles: true}}
+
+claude-agents:
+  options: {autoDiscover: true, runIf: ['builtin:isVirt']}
+  include:
+    profiles:
+      - source: "@https://gitlab.com/konradodwrot/configs//profiles/llm/claude/che.yml::llm/claude/virt"
+        ctx: {repo: Control}
+##[<] 🤖🤖
