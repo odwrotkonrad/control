@@ -4,7 +4,21 @@ Cross-repo automation: prose propagation, dependency graph, regen MRs, local syn
 
 ## Purpose
 
-Reacts to [prose](https://gitlab.com/konradodwrot/prose) releases: a prose tag triggers this repo's pipeline, which aggregates the dependency graph, resolves affected downstreams, and fans out regen jobs, each opening a deterministic MR that bumps the downstream's prose pin and re-renders its docs. Patch and minor MRs auto-merge on green CI; major waits for a human.
+### What It Is
+
+Cross-repo automation hub: reacts to prose releases, owns the generated dependency graph aggregated from per-repo `.repo/cross-repo-interface.yml` declarations, regenerates affected downstreams as deterministic bot MRs (auto-merge on patch/minor, human review on major), and ships a local watcher that keeps non-checked-out rendered outputs fresh in local worktrees.
+
+### Why It Exists
+
+Centralized prose needs an operator: something must notice a prose release, know who consumes it, and carry the update into every affected repo. The dependency graph was hand-maintained in one spec file; here each repo declares its own interface and control derives the graph, so the map never drifts from the territory.
+
+### Goals
+
+- Prose tag → triggered pipeline → verify affected downstreams → fan out regen MRs.
+- Dependency graph generated, never hand-edited: per-repo declarations merged over bootstrap seeds, inconsistency fails the build.
+- Bot MRs deterministic and safe: fixed text template, auto-merge only patch/minor on green downstream CI.
+- Local sync: the watcher re-renders only gitignored outputs, tracked files change via MRs only.
+- Workspace assembly lives here: the `workspace/` che profile clones the group tree, links parent Makefiles and the VS Code workspace file, and generates the non-checked-out repo indexes.
 
 ## Dependency graph
 
@@ -19,7 +33,7 @@ Each repo declares its own surface in `.repo/cross-repo-interface.yml`: `upstrea
 - `scripts/aggregate/`: build `deps/deps-graph.yml` from interfaces (`--local <workspace>` offline, `--check` drift gate).
 - `scripts/verify/`: queries over the graph (`--produces <repo>`, `--consumes <repo>`, `--affected <vertex>`), plus `--emit-pipeline` writing the regen child pipeline for a `PROSE_TAG`.
 - `scripts/regen/`: per-downstream regen: bump prose pin, `make render-templates`, branch, MR, auto-merge when the bump is at most minor. `--dry-run --workdir <checkout>` prints the plan.
-- `scripts/watcher/`: local poller refreshing only non-checked-out (gitignored) rendered outputs per worktree; tracked files change via the MR flow only.
+- `scripts/watcher/`: local poller refreshing only non-checked-out (gitignored) rendered outputs per worktree. Tracked files change via the MR flow only.
 
 ## License
 
