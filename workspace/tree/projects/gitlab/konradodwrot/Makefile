@@ -10,7 +10,6 @@ SHELL := zsh
 #   the path's last segment as <name> (all basenames unique here).
 REPOS := \
   konradodwrot/configs \
-  konradodwrot/conventions \
   konradodwrot/go-modules \
   konradodwrot/notes \
   konradodwrot/resume-md-pdf \

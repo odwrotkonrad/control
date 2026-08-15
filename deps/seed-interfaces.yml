@@ -2,13 +2,11 @@
 repos:
   configs:
     upstream:
-      - conventions/conventions-doc
       - go-modules/che
       - infra/oci-images/ci-linux
     edges:
       configs/gitlab/projects: [repo-index]
       configs/purpose-doc: [repo-index]
-      conventions/purpose-doc: [repo-index]
       go-modules/purpose-doc: [repo-index]
       go-modules/che: [repo-index]
       infra/iac/purpose-doc: [repo-index]
@@ -22,16 +20,8 @@ repos:
       - {name: gitlab/projects, type: che-profile}
       - {name: purpose-doc, type: ai-prose}
       - {name: repo-index, type: ai-prose}
-  conventions:
-    upstream:
-      - configs/llm/claude
-      - infra/oci-images/ci-linux
-    downstream:
-      - {name: conventions-doc, type: ai-prose}
-      - {name: purpose-doc, type: ai-prose}
   go-modules:
     upstream:
-      - conventions/conventions-doc
       - configs/llm/claude
       - infra/oci-images/ci-linux
       - infra/oci-images/ci-linux-dind
@@ -45,7 +35,6 @@ repos:
       - {name: purpose-doc, type: ai-prose}
   infra/iac:
     upstream:
-      - conventions/conventions-doc
       - configs/llm/claude
       - infra/oci-images/ci-linux
     downstream:
@@ -53,7 +42,6 @@ repos:
       - {name: purpose-doc, type: ai-prose}
   infra/oci-images:
     upstream:
-      - conventions/conventions-doc
       - configs/llm/claude
       - infra/iac/tf-lock
       - infra/oci-images/ci-linux
@@ -67,7 +55,6 @@ repos:
       - {name: purpose-doc, type: ai-prose}
   infra/sandbox:
     upstream:
-      - conventions/conventions-doc
       - configs/llm/claude
       - infra/oci-images/ci-linux
     edges:
@@ -79,7 +66,6 @@ repos:
       - {name: purpose-doc, type: ai-prose}
   notes:
     upstream:
-      - conventions/conventions-doc
       - configs/llm/claude
       - infra/oci-images/ci-linux
     downstream:

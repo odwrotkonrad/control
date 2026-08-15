@@ -2,7 +2,6 @@
   "folders": [
     { "name": "configs", "path": "konradodwrot/configs" },
     { "name": "control", "path": "konradodwrot/control" },
-    { "name": "conventions", "path": "konradodwrot/conventions" },
     { "name": "go-modules", "path": "konradodwrot/go-modules" },
     { "name": "notes", "path": "konradodwrot/notes" },
     { "name": "prose", "path": "konradodwrot/prose" },

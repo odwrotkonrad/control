@@ -8,8 +8,6 @@ repositories:
     artifacts:
       - {name: deps-graph, type: dataset}
       - {name: workspace, type: che-profile}
-  - repo: conventions
-    artifacts: []
   - repo: go-modules
     artifacts:
       - {name: che, type: binary}
@@ -41,7 +39,6 @@ repositories:
       - {name: styled-resume-pdf, type: pdf}
 edges:
   configs/llm/claude:
-    - conventions
     - go-modules
     - infra/iac
     - infra/oci-images
@@ -67,7 +64,6 @@ edges:
   infra/oci-images/ci-linux:
     - configs
     - control
-    - conventions
     - go-modules
     - infra/iac
     - infra/oci-images
