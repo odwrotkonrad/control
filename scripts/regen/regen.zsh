@@ -76,7 +76,9 @@ for f in ${spec_files#$workdir/}; {
 make render-templates 2>/dev/null || make repo-render-templates
 git checkout -b $branch
 git add -A
-git commit -m "$title"
+#[why] the ci container carries no git identity and the commit is the bot's, not a person's: name it from the
+#   job's own identity so the regen MR's authorship points back at the pipeline that opened it
+git -c user.name="${GITLAB_USER_NAME:-control-maintainer}" -c user.email="${GITLAB_USER_EMAIL:-control-maintainer@noreply.gitlab.com}" commit -m "$title"
 git push -u origin $branch
 mr_args=(--title "$title" --description "Automated prose regen: $old → $tag ($bump bump)." --source-branch $branch --repo $group/$repo --yes)
 glab mr create $mr_args
