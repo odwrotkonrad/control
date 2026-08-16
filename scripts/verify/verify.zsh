@@ -5,6 +5,7 @@ set -euo pipefail
 repo_root=${0:a:h:h:h}
 graph=$repo_root/deps/deps-graph.yml
 ci_image=registry.gitlab.com/konradodwrot/infra/oci-images/ci-linux:latest
+runner_tag=gke-linux-amd64
 
 zparseopts -D -E -- -graph:=o_graph -produces:=o_prod -consumes:=o_cons -affected:=o_aff -emit-pipeline:=o_emit
 (( ${#o_graph} )) && graph=${o_graph[2]}
@@ -74,6 +75,8 @@ if (( ${#o_emit} )) {
       for r in $work; {
         print "regen:$r:"
         print "  image: $ci_image"
+        print '  tags:'
+        print "    - $runner_tag"
         print '  script:'
         print -n "    - scripts/regen/regen.zsh --repo $r --tag $tag"
         [[ -n $prev ]] && print -n " --prev $prev"
@@ -82,6 +85,8 @@ if (( ${#o_emit} )) {
     } else {
       print 'no-pinned-downstreams:'
       print "  image: $ci_image"
+      print '  tags:'
+      print "    - $runner_tag"
       print '  script:'
       print "    - echo 'prose $tag: no affected downstreams'"
     }
