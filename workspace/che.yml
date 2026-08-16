@@ -1,7 +1,10 @@
 # yaml-language-server: $schema=https://gitlab.com/konradodwrot/go-modules/-/raw/main/che/assets/data/che.schema.json
 ##[>] 🤖🤖
 gitlab/projects:
-  options: {runIf: ['env:GITLAB_GROUPS', 'env:GITLAB_TOKEN']}
+  options:
+    runIf:
+      - env:GITLAB_GROUPS
+      - env:GITLAB_TOKEN
   include:
     runScripts:
       - scripts/10-clone.zsh
@@ -9,8 +12,12 @@ gitlab/projects:
 
 #[why] link the workspace-parent Makefile onto the cloned parent dirs (tree/ mirrors the on-disk layout: projects/{,gitlab/,gitlab/konradodwrot/}Makefile): run `make init-note` from a parent instead of `make -C konradodwrot/notes init-note`; real host only (isVirt == false), skips image bakes/sandbox pods where $HOME/projects/gitlab is not the workspace
 gitlab/projects-parent-links:
-  options: {profileWorkingDirectory: tree, runIf: ['builtin:isVirt == false']}
+  options:
+    profileWorkingDirectory: tree
+    runIf:
+      - builtin:isVirt == false
   include:
     makeLinks:
-      - {source: projects/**, dest: $HOME/projects/**}
+      - source: projects/**
+        dest: $HOME/projects/**
 ##[<] 🤖🤖
