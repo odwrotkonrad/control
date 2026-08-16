@@ -10,6 +10,13 @@ stages:
   - verify
   - regen
 
+#[why] all CI runs on the self-hosted GKE runners: no SaaS compute minutes remain. set once here so a
+#   new job inherits it instead of silently having no runner. gke-linux-amd64 resolves to the medium
+#   size, matching the SaaS runner it replaces
+default:
+  tags:
+    - gke-linux-amd64
+
 variables:
   CI_IMAGE: registry.gitlab.com/konradodwrot/infra/oci-images/ci-linux:latest
 
