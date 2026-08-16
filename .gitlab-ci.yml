@@ -14,6 +14,17 @@ stages:
 #   new job inherits it instead of silently having no runner. gke-linux-amd64 resolves to the medium
 #   size, matching the SaaS runner it replaces
 default:
+  #[why] spot nodes are preempted mid-job and the manager itself runs on spot: infrastructure
+  #   failures are expected, not exceptional. retries cover runner and API faults only, never a
+  #   failing script
+  retry:
+    max: 3
+    when:
+      - runner_system_failure
+      - api_failure
+      - stuck_or_timeout_failure
+      - scheduler_failure
+      - unknown_failure
   tags:
     - gke-linux-amd64
 
