@@ -15,10 +15,10 @@ stages:
 #   size, matching the SaaS runner it replaces
 default:
   #[why] spot nodes are preempted mid-job and the manager itself runs on spot: infrastructure
-  #   failures are expected, not exceptional. retries cover runner and API faults only, never a
-  #   failing script
+  #   failures are expected, not exceptional. 2 is gitlab's hard maximum, so 3 attempts in total.
+  #   retries cover runner and API faults only, never a failing script
   retry:
-    max: 3
+    max: 2
     when:
       - runner_system_failure
       - api_failure
