@@ -3,7 +3,6 @@
 set -euo pipefail
 
 group=konradodwrot
-pin_pattern='@[^ "]*prose[^ "]*\?ref=v[0-9]+\.[0-9]+\.[0-9]+'
 
 repo="" tag="" prev="" workdir="" dry=0
 zparseopts -D -E -- -repo:=o_repo -tag:=o_tag -prev:=o_prev -workdir:=o_wd -dry-run=o_dry
@@ -30,7 +29,14 @@ if (( ! ${#spec_files} )) {
   exit 0
 }
 
-old=$(rg -o --no-filename "$pin_pattern" $spec_files 2>/dev/null | rg -o 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
+old=""
+for f in $spec_files; {
+  for line in ${(f)"$(<$f)"}; {
+    [[ $line =~ 'prose[^ "]*\?ref=(v[0-9]+\.[0-9]+\.[0-9]+)' ]] || continue
+    old=$match[1]
+    break 2
+  }
+}
 if [[ -z $old ]] {
   print "$repo: no prose pin in che.yml, nothing to regen"
   exit 0
