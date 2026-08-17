@@ -63,11 +63,30 @@ if (( dry )) {
   print "DRY RUN: regen plan for $repo"
   print "  pin:        $old → $tag ($bump bump)"
   print "  render:     make render-templates in $workdir"
+  print "  supersede:  close open [automation] prose MRs (except major bumps)"
   print "  branch:     $branch"
   print "  MR title:   $title"
   print "  MR body:    Automated prose regen: $old → $tag ($bump bump)."
-  print "  auto-merge: $auto_merge (patch/minor only, on green pipeline)"
+  print "  auto-merge: $auto_merge (set at creation, patch/minor only)"
   exit 0
+}
+
+#[why] a superseded regen MR is closed, never left for someone to reconcile: its pin is older than the
+#   one this run is about to open, so nothing in it is worth landing. a failed one is closed for the
+#   same reason and no other, the fresh MR reruns the pipeline from scratch. the failure itself is
+#   investigated from the pipeline it already left behind, not by keeping a dead MR open as a reminder
+#[why] the [automation] title prefix identifies them, never the branch name: matching prose-v once
+#   selected hand-written MRs from three unrelated repos, any of which this would then have closed
+#[why] a major bump is deliberately left for a human: never close what someone has been asked to read
+stale=$(glab api "projects/$group%2F$repo/merge_requests?state=opened&per_page=100" \
+  | yq -r '.[] | select(.title | test("^.automation. chore.prose.:")) | select(.title | test("→ v[0-9]+[.]0[.]0$") | not) | [.iid, .title] | @tsv')
+if [[ -n $stale ]] {
+  while IFS=$'\t' read -r iid stale_title; do
+    [[ -n $iid ]] || continue
+    glab api -X PUT "projects/$group%2F$repo/merge_requests/$iid" -f state_event=close >/dev/null \
+      && print "$repo: closed superseded !$iid ($stale_title)" \
+      || print "$repo: could not close superseded !$iid ($stale_title)"
+  done <<< $stale
 }
 
 cd $workdir
@@ -87,45 +106,45 @@ git add -A
 #   job's own identity so the regen MR's authorship points back at the pipeline that opened it
 git -c user.name="${GITLAB_USER_NAME:-control-maintainer}" -c user.email="${GITLAB_USER_EMAIL:-control-maintainer@noreply.gitlab.com}" commit -m "$title"
 git push -u origin $branch
-mr_args=(--title "$title" --description "Automated prose regen: $old → $tag ($bump bump)." --source-branch $branch --repo $group/$repo --yes)
+#[why] --auto-merge on the create call, not a merge request afterwards: gitlab attaches the pipeline a
+#   second or two after the MR exists, so every after-the-fact arming attempt races that gap and gets
+#   a 405. set at creation the flag is part of the same request and there is no gap to lose
+mr_args=(--title "$title" --description "Automated prose regen: $old → $tag ($bump bump)." --source-branch $branch --repo $group/$repo --remove-source-branch --yes)
+[[ $auto_merge == yes ]] && mr_args+=(--auto-merge)
 glab mr create $mr_args
 
-#[why] --auto-merge needs the MR's pipeline to exist: gitlab creates it a second or two after the MR
-#   itself, and asking to merge before it appears makes gitlab reject the request outright (405) and
-#   leaves the regen MR sitting open. poll until it shows up, then merge on green
+#[why] auto-merge only holds an MR whose pipeline is still running: one that already finished green
+#   has nothing left to wait on, and gitlab declines to arm rather than merging. a docs-only regen
+#   pipeline finishes in well under a minute, so this is the common case, not the edge one
 #[why] the merge api directly, not `glab mr merge`: that path demands a sha it will not look up
 #   itself, failing with "SHA must be provided when merging". yq parses the json, the ci image having
 #   no jq
-#[why] the unguarded merge is reserved for a repo that provably runs no merge-request pipeline: a
-#   slow, queued or failing pipeline must never be mistaken for an absent one and merged past. when
-#   auto-merge cannot be armed and a pipeline does exist, the MR is left open and reported, so a red
-#   regen is something a human sees rather than something that silently merged or silently stalled
+#[why] merging unguarded is reserved for a repo that provably runs no merge-request pipeline: a slow,
+#   queued or failing pipeline must never be mistaken for an absent one and merged past. anything this
+#   declines to merge is left open and reported, so a red regen is something a human sees rather than
+#   something that silently merged or silently stalled
 outcome=""
 if [[ $auto_merge == yes ]] {
   mr_iid=$(glab api "projects/$group%2F$repo/merge_requests?source_branch=$branch&state=opened" | yq -r '.[0].iid')
   mr_api="projects/$group%2F$repo/merge_requests/$mr_iid"
-  armed=0
-  for _ in {1..30}; do
-    sha=$(glab api $mr_api | yq -r '.sha')
-    if glab api -X PUT "$mr_api/merge" -f sha=$sha \
-         -f merge_when_pipeline_succeeds=true -f should_remove_source_branch=true; then
-      armed=1
-      break
-    fi
-    sleep 2
-  done
-  if (( armed )) {
+  mr=$(glab api $mr_api)
+  if [[ $(print -r -- "$mr" | yq -r '.merge_when_pipeline_succeeds // false') == true ]] {
     outcome="auto-merge armed"
   } else {
-    pipeline_id=$(glab api $mr_api | yq -r '.head_pipeline.id // ""')
-    if [[ -z $pipeline_id || $pipeline_id == null ]] {
-      glab api -X PUT "$mr_api/merge" -f sha=$(glab api $mr_api | yq -r '.sha') \
-        -f should_remove_source_branch=true
-      outcome="merged (repo runs no merge-request pipeline)"
-    } else {
-      pipeline_status=$(glab api $mr_api | yq -r '.head_pipeline.status // "unknown"')
-      outcome="LEFT OPEN: auto-merge refused, pipeline $pipeline_id is $pipeline_status"
-    }
+    pipeline_status=$(print -r -- "$mr" | yq -r '.head_pipeline.status // "none"')
+    case $pipeline_status in
+      success|none)
+        if glab api -X PUT "$mr_api/merge" -f sha=$(print -r -- "$mr" | yq -r '.sha') \
+             -f should_remove_source_branch=true; then
+          [[ $pipeline_status == none ]] \
+            && outcome="merged (repo runs no merge-request pipeline)" \
+            || outcome="merged (pipeline already green)"
+        else
+          outcome="LEFT OPEN: merge refused, merge status $(print -r -- "$mr" | yq -r '.detailed_merge_status // "unknown"')"
+        fi ;;
+      *)
+        outcome="LEFT OPEN: auto-merge not armed, pipeline is $pipeline_status" ;;
+    esac
   }
 } else {
   outcome="major bump, awaiting human review"
