@@ -131,6 +131,16 @@ if [[ $auto_merge == yes ]] {
   if [[ $(print -r -- "$mr" | yq -r '.merge_when_pipeline_succeeds // false') == true ]] {
     outcome="auto-merge armed"
   } else {
+    #[why] a freshly created MR has no head_pipeline yet, so "none" means "not attached yet" far
+    #   more often than "this repo runs no merge-request pipeline". Treating the two alike sent
+    #   every fan-out MR down the unguarded-merge path, where gitlab refused the merge because the
+    #   pipeline was still pending, and the MR was reported LEFT OPEN having never been armed.
+    #   Wait for the pipeline to appear before deciding which case this is
+    for _ in {1..30}; do
+      [[ $(print -r -- "$mr" | yq -r '.head_pipeline.id // "null"') != null ]] && break
+      sleep 2
+      mr=$(glab api $mr_api)
+    done
     pipeline_status=$(print -r -- "$mr" | yq -r '.head_pipeline.status // "none"')
     case $pipeline_status in
       success|none)
