@@ -65,9 +65,17 @@ if (( ${#o_aff} )) {
   exit 0
 }
 
-tag=${PROSE_TAG:?PROSE_TAG unset and no query flag given}
-prev=${PROSE_PREV_TAG:-}
-work=(${(f)"$(affected prose)"})
+#[why] the producer is a parameter, not always prose: che-packages publishes a catalog go-modules
+#   pins, and the same fan-out has to carry that version too. PRODUCER defaults to prose so the
+#   prose tag bridge keeps working unchanged, and PROSE_TAG stays accepted as its alias
+producer=${PRODUCER:-prose}
+tag=${RELEASE_TAG:-${PROSE_TAG:-}}
+[[ -n $tag ]] || { print -ru2 -- "RELEASE_TAG (or PROSE_TAG) unset and no query flag given"; exit 1 }
+prev=${RELEASE_PREV_TAG:-${PROSE_PREV_TAG:-}}
+
+#[why] the artifact, not the repo: a repo that publishes several things has one edge per artifact,
+#   and only the consumers of the released one should be regenerated
+work=(${(f)"$(affected ${PRODUCER_ARTIFACT:-$producer})"})
 
 if (( ${#o_emit} )) {
   {
@@ -78,7 +86,7 @@ if (( ${#o_emit} )) {
         print '  tags:'
         print "    - $runner_tag"
         print '  script:'
-        print -n "    - scripts/regen/regen.zsh --repo $r --tag $tag"
+        print -n "    - scripts/regen/regen.zsh --repo $r --tag $tag --producer $producer"
         [[ -n $prev ]] && print -n " --prev $prev"
         print ''
       }
@@ -88,7 +96,7 @@ if (( ${#o_emit} )) {
       print '  tags:'
       print "    - $runner_tag"
       print '  script:'
-      print "    - echo 'prose $tag: no affected downstreams'"
+      print "    - echo '$producer $tag: no affected downstreams'"
     }
   } > ${o_emit[2]}
   print "wrote ${o_emit[2]} (${#work} downstream(s): ${work:-none})"
