@@ -142,8 +142,34 @@ if [[ $auto_merge == yes ]] {
         else
           outcome="LEFT OPEN: merge refused, merge status $(print -r -- "$mr" | yq -r '.detailed_merge_status // "unknown"')"
         fi ;;
+      #[why] --auto-merge at creation does not always stick: gitlab attaches the pipeline a moment
+      #   after the MR exists, and an arming request that lands in that gap is refused. Retry here
+      #   until gitlab accepts, then confirm the flag is actually set rather than trusting the call.
+      #   Without this an MR whose pipeline goes green seconds later sits open forever, which is how
+      #   resume-md-pdf!25 ended up mergeable, green and unmerged
       *)
-        outcome="LEFT OPEN: auto-merge not armed, pipeline is $pipeline_status" ;;
+        for _ in {1..15}; do
+          glab api -X PUT "$mr_api/merge" -f sha=$(print -r -- "$mr" | yq -r '.sha') \
+            -f merge_when_pipeline_succeeds=true -f should_remove_source_branch=true >/dev/null 2>&1
+          mr=$(glab api $mr_api)
+          [[ $(print -r -- "$mr" | yq -r '.merge_when_pipeline_succeeds // false') == true ]] && break
+          #[why] the pipeline can finish green while we are still trying to arm: merge it outright
+          #   rather than arming a wait that has nothing left to wait for
+          if [[ $(print -r -- "$mr" | yq -r '.head_pipeline.status // "none"') == success ]] {
+            glab api -X PUT "$mr_api/merge" -f sha=$(print -r -- "$mr" | yq -r '.sha') \
+              -f should_remove_source_branch=true >/dev/null 2>&1
+            break
+          }
+          sleep 2
+        done
+        mr=$(glab api $mr_api)
+        if [[ $(print -r -- "$mr" | yq -r '.merge_when_pipeline_succeeds // false') == true ]] {
+          outcome="auto-merge armed (pipeline $pipeline_status)"
+        } elif [[ $(print -r -- "$mr" | yq -r '.state') == merged ]] {
+          outcome="merged (pipeline went green while arming)"
+        } else {
+          outcome="LEFT OPEN: could not arm auto-merge, pipeline is $(print -r -- "$mr" | yq -r '.head_pipeline.status // "none"'), merge status $(print -r -- "$mr" | yq -r '.detailed_merge_status // "unknown"')"
+        } ;;
     esac
   }
 } else {
