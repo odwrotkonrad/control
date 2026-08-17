@@ -14,7 +14,7 @@ Centralized prose needs an operator: something to notice a release, know who con
 
 ### Goals
 
-- Prose tag, triggered pipeline, verified downstreams, fanned-out regen MRs.
+- A prose tag triggers a pipeline, which verifies affected downstreams, then fans out regen MRs.
 - Dependency graph generated, never hand-edited: per-repo declarations merged over bootstrap seeds, inconsistency fails the build.
 - Bot MRs deterministic and safe: fixed text template, auto-merge only patch/minor on green downstream CI.
 - Local sync: the watcher re-renders only gitignored outputs, tracked files change via MRs only.
