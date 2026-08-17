@@ -54,7 +54,9 @@ bump=patch
 (( new_parts[1] != old_parts[1] )) && bump=major
 
 branch=prose-$tag
-title="chore(prose): $old → $tag"
+#[why] the [automation] prefix is how other automation finds these MRs: matching a branch-name
+#   pattern instead once selected hand-written MRs from three unrelated repos
+title="[automation] chore(prose): $old → $tag"
 auto_merge=$([[ $bump == major ]] && print no || print yes)
 
 if (( dry )) {
@@ -90,28 +92,43 @@ glab mr create $mr_args
 
 #[why] --auto-merge needs the MR's pipeline to exist: gitlab creates it a second or two after the MR
 #   itself, and asking to merge before it appears makes gitlab reject the request outright (405) and
-#   leaves the regen MR sitting open. poll until it shows up, then merge on green. a repo whose CI
-#   never runs on merge requests has no pipeline to wait for, so give up waiting and merge directly
+#   leaves the regen MR sitting open. poll until it shows up, then merge on green
 #[why] the merge api directly, not `glab mr merge`: that path demands a sha it will not look up
 #   itself, failing with "SHA must be provided when merging". yq parses the json, the ci image having
-#   no jq. merge_when_pipeline_succeeds is rejected (405) while the MR's pipeline does not exist yet,
-#   which is the state for the first seconds of a fresh MR, so retry until gitlab accepts it. the
-#   fallback merges outright for repos whose CI never runs on merge requests, where none is coming
+#   no jq
+#[why] the unguarded merge is reserved for a repo that provably runs no merge-request pipeline: a
+#   slow, queued or failing pipeline must never be mistaken for an absent one and merged past. when
+#   auto-merge cannot be armed and a pipeline does exist, the MR is left open and reported, so a red
+#   regen is something a human sees rather than something that silently merged or silently stalled
+outcome=""
 if [[ $auto_merge == yes ]] {
   mr_iid=$(glab api "projects/$group%2F$repo/merge_requests?source_branch=$branch&state=opened" | yq -r '.[0].iid')
   mr_api="projects/$group%2F$repo/merge_requests/$mr_iid"
-  merged=0
+  armed=0
   for _ in {1..30}; do
     sha=$(glab api $mr_api | yq -r '.sha')
     if glab api -X PUT "$mr_api/merge" -f sha=$sha \
          -f merge_when_pipeline_succeeds=true -f should_remove_source_branch=true; then
-      merged=1
+      armed=1
       break
     fi
     sleep 2
   done
-  (( merged )) || glab api -X PUT "$mr_api/merge" -f sha=$(glab api $mr_api | yq -r '.sha') \
-    -f should_remove_source_branch=true
+  if (( armed )) {
+    outcome="auto-merge armed"
+  } else {
+    pipeline_id=$(glab api $mr_api | yq -r '.head_pipeline.id // ""')
+    if [[ -z $pipeline_id || $pipeline_id == null ]] {
+      glab api -X PUT "$mr_api/merge" -f sha=$(glab api $mr_api | yq -r '.sha') \
+        -f should_remove_source_branch=true
+      outcome="merged (repo runs no merge-request pipeline)"
+    } else {
+      pipeline_status=$(glab api $mr_api | yq -r '.head_pipeline.status // "unknown"')
+      outcome="LEFT OPEN: auto-merge refused, pipeline $pipeline_id is $pipeline_status"
+    }
+  }
+} else {
+  outcome="major bump, awaiting human review"
 }
-print "$repo: regen MR opened ($old → $tag, auto-merge: $auto_merge)"
+print "$repo: regen MR opened ($old → $tag): $outcome"
 ##[<] 🤖🤖🤖
