@@ -4,15 +4,16 @@ set -euo pipefail
 
 group=konradodwrot
 
-repo="" tag="" prev="" workdir="" dry=0
-zparseopts -D -E -- -repo:=o_repo -tag:=o_tag -prev:=o_prev -workdir:=o_wd -dry-run=o_dry
+repo="" tag="" prev="" workdir="" producer=prose dry=0
+zparseopts -D -E -- -repo:=o_repo -tag:=o_tag -prev:=o_prev -workdir:=o_wd -producer:=o_prod -dry-run=o_dry
 (( ${#o_repo} )) && repo=${o_repo[2]}
 (( ${#o_tag} )) && tag=${o_tag[2]}
 (( ${#o_prev} )) && prev=${o_prev[2]}
 (( ${#o_wd} )) && workdir=${o_wd[2]}
+(( ${#o_prod} )) && producer=${o_prod[2]}
 (( ${#o_dry} )) && dry=1
 
-[[ -n $repo && -n $tag ]] || { print "usage: regen.zsh --repo <repo> --tag <vX.Y.Z> [--prev <tag>] [--workdir <dir>] [--dry-run]" >&2; exit 2 }
+[[ -n $repo && -n $tag ]] || { print "usage: regen.zsh --repo <repo> --tag <vX.Y.Z> [--prev <tag>] [--workdir <dir>] [--producer <name>] [--dry-run]" >&2; exit 2 }
 
 if [[ -z $workdir ]] {
   if (( dry )) {
@@ -23,22 +24,36 @@ if [[ -z $workdir ]] {
   git clone --depth 1 https://control-maintainer:${CONTROL_GITLAB_TOKEN:?}@gitlab.com/$group/$repo.git $workdir
 }
 
-spec_files=($workdir/che.yml(N) $workdir/.repo/che.yml(N))
+#[why] each producer writes its version somewhere different in its own format: prose into a che.yml
+#   remote-source ref, che-packages into a pin env file read by the vendor step. The producer
+#   selects which files to look in and which pattern names the version
+case $producer in
+  prose)
+    spec_files=($workdir/che.yml(N) $workdir/.repo/che.yml(N))
+    pin_pattern='prose[^ "]*\?ref=(v[0-9]+\.[0-9]+\.[0-9]+)' ;;
+  che-packages)
+    spec_files=($workdir/che/packages-pin.env(N))
+    pin_pattern='CHE_PACKAGES_VERSION=v?([0-9]+\.[0-9]+\.[0-9]+)' ;;
+  *)
+    print -ru2 -- "regen: unknown producer $producer"
+    exit 2 ;;
+esac
+
 if (( ! ${#spec_files} )) {
-  print "$repo: no che.yml, nothing to regen"
+  print "$repo: no $producer pin file, nothing to regen"
   exit 0
 }
 
 old=""
 for f in $spec_files; {
   for line in ${(f)"$(<$f)"}; {
-    [[ $line =~ 'prose[^ "]*\?ref=(v[0-9]+\.[0-9]+\.[0-9]+)' ]] || continue
+    [[ $line =~ $pin_pattern ]] || continue
     old=$match[1]
     break 2
   }
 }
 if [[ -z $old ]] {
-  print "$repo: no prose pin in che.yml, nothing to regen"
+  print "$repo: no $producer pin found, nothing to regen"
   exit 0
 }
 
@@ -53,20 +68,20 @@ bump=patch
 (( new_parts[2] != old_parts[2] )) && bump=minor
 (( new_parts[1] != old_parts[1] )) && bump=major
 
-branch=prose-$tag
+branch=$producer-$tag
 #[why] the [automation] prefix is how other automation finds these MRs: matching a branch-name
 #   pattern instead once selected hand-written MRs from three unrelated repos
-title="[automation] chore(prose): $old → $tag"
+title="[automation] chore($producer): $old → $tag"
 auto_merge=$([[ $bump == major ]] && print no || print yes)
 
 if (( dry )) {
   print "DRY RUN: regen plan for $repo"
   print "  pin:        $old → $tag ($bump bump)"
   print "  render:     make render-templates in $workdir"
-  print "  supersede:  close open [automation] prose MRs (except major bumps)"
+  print "  supersede:  close open [automation] $producer MRs (except major bumps)"
   print "  branch:     $branch"
   print "  MR title:   $title"
-  print "  MR body:    Automated prose regen: $old → $tag ($bump bump)."
+  print "  MR body:    Automated $producer regen: $old → $tag ($bump bump)."
   print "  auto-merge: $auto_merge (set at creation, patch/minor only)"
   exit 0
 }
@@ -78,8 +93,16 @@ if (( dry )) {
 #[why] the [automation] title prefix identifies them, never the branch name: matching prose-v once
 #   selected hand-written MRs from three unrelated repos, any of which this would then have closed
 #[why] a major bump is deliberately left for a human: never close what someone has been asked to read
+#[why] this closes other people's merge requests, so the match is literal and anchored: [automation]
+#   as real brackets, the producer as an exact name, both from the start of the title. The earlier
+#   pattern spelled them as . wildcards and matched "Xautomation. choreXproseX:", a title no
+#   automation wrote. Nothing without the prefix, and nothing belonging to another producer, is
+#   eligible to be closed here
+#[why] the producer is interpolated by the shell, not passed via env(): yq does not evaluate env()
+#   as a regex inside test(), so the pattern was empty and matched every title, hand-written ones
+#   included
 stale=$(glab api "projects/$group%2F$repo/merge_requests?state=opened&per_page=100" \
-  | yq -r '.[] | select(.title | test("^.automation. chore.prose.:")) | select(.title | test("→ v[0-9]+[.]0[.]0$") | not) | [.iid, .title] | @tsv')
+  | yq -r ".[] | select(.title | test(\"^\\\\[automation\\\\] chore\\\\(${producer}\\\\): \")) | select(.title | test(\"→ v[0-9]+[.]0[.]0\$\") | not) | [.iid, .title] | @tsv")
 if [[ -n $stale ]] {
   while IFS=$'\t' read -r iid stale_title; do
     [[ -n $iid ]] || continue
@@ -91,8 +114,15 @@ if [[ -n $stale ]] {
 
 cd $workdir
 for f in ${spec_files#$workdir/}; {
-  sed -i.prosebak -E "s|(prose[^ \"]*\?ref=)v[0-9]+\.[0-9]+\.[0-9]+|\1$tag|g" $f
-  command rm -f $f.prosebak
+  #[why] the pin is written back in the producer's own format: prose carries the leading v in the
+  #   ref, che-packages stores a bare version the vendor script interpolates into a URL
+  case $producer in
+    prose)
+      sed -i.pinbak -E "s|(prose[^ \"]*\?ref=)v[0-9]+\.[0-9]+\.[0-9]+|\1$tag|g" $f ;;
+    che-packages)
+      sed -i.pinbak -E "s|(CHE_PACKAGES_VERSION=)v?[0-9]+\.[0-9]+\.[0-9]+|\1${tag#v}|g" $f ;;
+  esac
+  command rm -f $f.pinbak
 }
 #[why] regen commits tracked docs, and no tracked doc carries a secret: the op:// refs live in
 #   gitignored local .env templates a repo renders for its developers. this job holds no 1Password
@@ -109,7 +139,7 @@ git push -u origin $branch
 #[why] --auto-merge on the create call, not a merge request afterwards: gitlab attaches the pipeline a
 #   second or two after the MR exists, so every after-the-fact arming attempt races that gap and gets
 #   a 405. set at creation the flag is part of the same request and there is no gap to lose
-mr_args=(--title "$title" --description "Automated prose regen: $old → $tag ($bump bump)." --source-branch $branch --repo $group/$repo --remove-source-branch --yes)
+mr_args=(--title "$title" --description "Automated $producer regen: $old → $tag ($bump bump)." --source-branch $branch --repo $group/$repo --remove-source-branch --yes)
 [[ $auto_merge == yes ]] && mr_args+=(--auto-merge)
 glab mr create $mr_args
 
