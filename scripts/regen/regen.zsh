@@ -27,17 +27,28 @@ if [[ -z $workdir ]] {
 #[why] each producer writes its version somewhere different in its own format: prose into a che.yml
 #   remote-source ref, che-packages into a pin env file read by the vendor step. The producer
 #   selects which files to look in and which pattern names the version
+#[why] found by content, not from a fixed file list: configs pins prose in .repo/che.yml and again
+#   in profiles/llm/claude/che.yml, and a list naming only the first two left the third at v0.0.4
+#   while the repo moved to v0.0.22. A pin the fan-out does not look at is a pin that rots
 case $producer in
   prose)
-    spec_files=($workdir/che.yml(N) $workdir/.repo/che.yml(N))
+    pin_glob='*.yml'
     pin_pattern='prose[^ "]*\?ref=(v[0-9]+\.[0-9]+\.[0-9]+)' ;;
   che-packages)
-    spec_files=($workdir/che/packages-pin.env(N))
+    pin_glob='*.env'
     pin_pattern='CHE_PACKAGES_VERSION=v?([0-9]+\.[0-9]+\.[0-9]+)' ;;
   *)
     print -ru2 -- "regen: unknown producer $producer"
     exit 2 ;;
 esac
+
+#[why] the checkout's tracked files only: a build artefact or a vendored copy carrying the same
+#   string is not this repo's pin to move
+spec_files=()
+for f in ${(f)"$(cd $workdir && git ls-files -- $pin_glob '**/'$pin_glob 2>/dev/null)"}; {
+  [[ -f $workdir/$f ]] || continue
+  grep -qE -- "$pin_pattern" $workdir/$f 2>/dev/null && spec_files+=($workdir/$f)
+}
 
 if (( ! ${#spec_files} )) {
   print "$repo: no $producer pin file, nothing to regen"
