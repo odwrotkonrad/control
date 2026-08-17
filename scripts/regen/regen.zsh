@@ -92,14 +92,26 @@ glab mr create $mr_args
 #   itself, and asking to merge before it appears makes gitlab reject the request outright (405) and
 #   leaves the regen MR sitting open. poll until it shows up, then merge on green. a repo whose CI
 #   never runs on merge requests has no pipeline to wait for, so give up waiting and merge directly
+#[why] the merge api directly, not `glab mr merge`: that path demands a sha it will not look up
+#   itself, failing with "SHA must be provided when merging". yq parses the json, the ci image having
+#   no jq. merge_when_pipeline_succeeds is rejected (405) while the MR's pipeline does not exist yet,
+#   which is the state for the first seconds of a fresh MR, so retry until gitlab accepts it. the
+#   fallback merges outright for repos whose CI never runs on merge requests, where none is coming
 if [[ $auto_merge == yes ]] {
-  mr_iid=$(glab api "projects/$group%2F$repo/merge_requests?source_branch=$branch&state=opened" --method GET | jq -r '.[0].iid')
+  mr_iid=$(glab api "projects/$group%2F$repo/merge_requests?source_branch=$branch&state=opened" | yq -r '.[0].iid')
+  mr_api="projects/$group%2F$repo/merge_requests/$mr_iid"
+  merged=0
   for _ in {1..30}; do
-    [[ $(glab api "projects/$group%2F$repo/merge_requests/$mr_iid" | jq -r '.head_pipeline.id // "null"') != null ]] && break
+    sha=$(glab api $mr_api | yq -r '.sha')
+    if glab api -X PUT "$mr_api/merge" -f sha=$sha \
+         -f merge_when_pipeline_succeeds=true -f should_remove_source_branch=true; then
+      merged=1
+      break
+    fi
     sleep 2
   done
-  glab mr merge $branch --repo $group/$repo --auto-merge --remove-source-branch --yes \
-    || glab mr merge $branch --repo $group/$repo --remove-source-branch --yes
+  (( merged )) || glab api -X PUT "$mr_api/merge" -f sha=$(glab api $mr_api | yq -r '.sha') \
+    -f should_remove_source_branch=true
 }
 print "$repo: regen MR opened ($old → $tag, auto-merge: $auto_merge)"
 ##[<] 🤖🤖🤖
