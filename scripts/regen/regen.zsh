@@ -140,7 +140,14 @@ for f in ${spec_files#$workdir/}; {
 #   credentials, so resolving them is both impossible and pointless, and iac's ontoRepo profile
 #   rendering .env alongside its docs failed the whole render on the first op:// ref it met
 export CHE_RENDER_TEMPLATES_SKIP_SECRETS=true
-make render-templates 2>/dev/null || make repo-render-templates
+#[why] pick the target the repo actually defines, rather than running one and falling back on
+#   failure: only configs names it repo-render-templates, every other repo names it
+#   render-templates. The old `render-templates || repo-render-templates` masked any real render
+#   failure behind "No rule to make target 'repo-render-templates'", so the cause was invisible
+render_target=render-templates
+make -n repo-render-templates >/dev/null 2>&1 && render_target=repo-render-templates
+print -r -- "regen: rendering via make $render_target"
+make $render_target
 git checkout -b $branch
 git add -A
 #[why] the ci container carries no git identity and the commit is the bot's, not a person's: name it from the
