@@ -93,13 +93,16 @@ if (( dry )) {
 #[why] the [automation] title prefix identifies them, never the branch name: matching prose-v once
 #   selected hand-written MRs from three unrelated repos, any of which this would then have closed
 #[why] a major bump is deliberately left for a human: never close what someone has been asked to read
-#[why] scoped to this producer: the filter named prose literally, so a catalog regen would have
-#   closed the repo's open prose MRs, whose pin this run knows nothing about
-#[why] the producer is interpolated into the pattern by the shell, not passed via env(): yq does not
-#   evaluate env() as a regex inside test(), and an empty pattern matches every title, which would
-#   have closed hand-written MRs alongside the automated ones
+#[why] this closes other people's merge requests, so the match is literal and anchored: [automation]
+#   as real brackets, the producer as an exact name, both from the start of the title. The earlier
+#   pattern spelled them as . wildcards and matched "Xautomation. choreXproseX:", a title no
+#   automation wrote. Nothing without the prefix, and nothing belonging to another producer, is
+#   eligible to be closed here
+#[why] the producer is interpolated by the shell, not passed via env(): yq does not evaluate env()
+#   as a regex inside test(), so the pattern was empty and matched every title, hand-written ones
+#   included
 stale=$(glab api "projects/$group%2F$repo/merge_requests?state=opened&per_page=100" \
-  | yq -r ".[] | select(.title | test(\"^.automation. chore.${producer}.:\")) | select(.title | test(\"→ v[0-9]+[.]0[.]0\$\") | not) | [.iid, .title] | @tsv")
+  | yq -r ".[] | select(.title | test(\"^\\\\[automation\\\\] chore\\\\(${producer}\\\\): \")) | select(.title | test(\"→ v[0-9]+[.]0[.]0\$\") | not) | [.iid, .title] | @tsv")
 if [[ -n $stale ]] {
   while IFS=$'\t' read -r iid stale_title; do
     [[ -n $iid ]] || continue
