@@ -1,5 +1,6 @@
 {
   "folders": [
+    { "name": "che-packages", "path": "konradodwrot/che-packages" },
     { "name": "configs", "path": "konradodwrot/configs" },
     { "name": "control", "path": "konradodwrot/control" },
     { "name": "go-modules", "path": "konradodwrot/go-modules" },

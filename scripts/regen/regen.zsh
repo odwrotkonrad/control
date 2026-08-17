@@ -73,6 +73,11 @@ for f in ${spec_files#$workdir/}; {
   sed -i.prosebak -E "s|(prose[^ \"]*\?ref=)v[0-9]+\.[0-9]+\.[0-9]+|\1$tag|g" $f
   command rm -f $f.prosebak
 }
+#[why] regen commits tracked docs, and no tracked doc carries a secret: the op:// refs live in
+#   gitignored local .env templates a repo renders for its developers. this job holds no 1Password
+#   credentials, so resolving them is both impossible and pointless, and iac's ontoRepo profile
+#   rendering .env alongside its docs failed the whole render on the first op:// ref it met
+export CHE_RENDER_TEMPLATES_SKIP_SECRETS=true
 make render-templates 2>/dev/null || make repo-render-templates
 git checkout -b $branch
 git add -A
@@ -82,6 +87,19 @@ git -c user.name="${GITLAB_USER_NAME:-control-maintainer}" -c user.email="${GITL
 git push -u origin $branch
 mr_args=(--title "$title" --description "Automated prose regen: $old → $tag ($bump bump)." --source-branch $branch --repo $group/$repo --yes)
 glab mr create $mr_args
-[[ $auto_merge == yes ]] && glab mr merge $branch --repo $group/$repo --auto-merge --remove-source-branch --yes
+
+#[why] --auto-merge needs the MR's pipeline to exist: gitlab creates it a second or two after the MR
+#   itself, and asking to merge before it appears makes gitlab reject the request outright (405) and
+#   leaves the regen MR sitting open. poll until it shows up, then merge on green. a repo whose CI
+#   never runs on merge requests has no pipeline to wait for, so give up waiting and merge directly
+if [[ $auto_merge == yes ]] {
+  mr_iid=$(glab api "projects/$group%2F$repo/merge_requests?source_branch=$branch&state=opened" --method GET | jq -r '.[0].iid')
+  for _ in {1..30}; do
+    [[ $(glab api "projects/$group%2F$repo/merge_requests/$mr_iid" | jq -r '.head_pipeline.id // "null"') != null ]] && break
+    sleep 2
+  done
+  glab mr merge $branch --repo $group/$repo --auto-merge --remove-source-branch --yes \
+    || glab mr merge $branch --repo $group/$repo --remove-source-branch --yes
+}
 print "$repo: regen MR opened ($old → $tag, auto-merge: $auto_merge)"
 ##[<] 🤖🤖🤖
