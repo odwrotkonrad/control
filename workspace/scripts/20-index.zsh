@@ -15,16 +15,6 @@ if ! (( $+commands[che] )) {
   return 0
 }
 
-#[why] gate on the same vars as 10-clone: no token/group -> the clone was skipped, so there is nothing on disk to index
-if [[ -z ${GITLAB_TOKEN-} ]] {
-  print -r -- "index: skip: GITLAB_TOKEN unset"
-  return 0
-}
-if [[ -z ${GITLAB_GROUPS-} && -z ${GITLAB_GROUP-} ]] {
-  print -r -- "index: skip: no group in GITLAB_GROUPS/GITLAB_GROUP"
-  return 0
-}
-
 #[what] the top index lists each group's host dir, then every subgroup below
 typeset root=${WORKSPACE_DIR:-$HOME/projects/gitlab}
 typeset tpl=${0:A:h}/../templates/subgroup-index.md.ontoRepo.tpl

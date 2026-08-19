@@ -2,7 +2,7 @@
 #[what] Project's Makefile
 SHELL := zsh
 
-COMMANDS := render-templates aggregate aggregate-check repo-ci-prepare-hooks repo-ci-precommit-all
+COMMANDS := semver-next tag-mint render-templates aggregate aggregate-check repo-ci-prepare-hooks repo-ci-precommit-all
 
 .PHONY: $(COMMANDS)
 
@@ -21,6 +21,16 @@ aggregate:
 aggregate-check:
 	@scripts/aggregate/aggregate.zsh --check
 ##[<] Graph
+
+##[>] Release [genai-include]
+#[what] print the next semver tag inferred from the last tag..HEAD diff (override: `semver: major|minor|patch` commit token)
+semver-next:
+	@ci/semver-bump.zsh
+
+#[what] mint and push the next semver tag (CI: authed via TAG_TOKEN)
+tag-mint:
+	@ci/tag-mint.zsh
+##[<] Release
 
 ##[>] CI [genai-include]
 #[what] install lefthook git hooks

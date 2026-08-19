@@ -13,6 +13,14 @@ ontoRepo:
             dest: assets/docs-agents/purpose.md
           - source: //shared/license/LICENSE
             dest: LICENSE
+          #[why] tagging logic authored once in prose, rendered here untracked: no duplicated script per repo
+          - source: //shared/ci
+            chmod: "0755"
+            <<<:
+              - source: /semver-bump.zsh
+                dest: ci/semver-bump.zsh
+              - source: /tag-mint.zsh
+                dest: ci/tag-mint.zsh
           - dest: assets/data
             <<<:
               - source: //conventions/conventions.md
