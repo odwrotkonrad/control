@@ -52,14 +52,17 @@ function index_subgroup {
   print -r -- "index: $dir"
 }
 
+#[why] every branch returns explicitly: under errexit a trailing failed test (no subgroup here, e.g. a
+#   workspace not cloned yet) would otherwise return non-zero and abort the whole run
 function walk {
   local dir=$1
-  [[ -d $dir/.git ]] && return 0
+  if [[ -d $dir/.git ]] return 0
   local child is_subgroup=0
   for child in $dir/*(N/); do
     if { has_repo_below $child } { is_subgroup=1; walk $child }
   done
-  (( is_subgroup )) && index_subgroup $dir
+  if (( is_subgroup )) index_subgroup $dir
+  return 0
 }
 
 walk $root
