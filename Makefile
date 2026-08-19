@@ -2,9 +2,17 @@
 #[what] Project's Makefile
 SHELL := zsh
 
+WRAPPERS := repo-prepare-dev-env
 COMMANDS := semver-next tag-mint render-templates aggregate aggregate-check repo-ci-prepare-hooks repo-ci-precommit-all
 
-.PHONY: $(COMMANDS)
+.PHONY: $(WRAPPERS) $(COMMANDS)
+
+##[>] Dev Environment [genai-include]
+#[why] render precedes hooks: the docsgen pre-commit hook runs render-templates and fails on drift,
+#   so a fresh clone whose generated files were never rendered would fail its first commit
+#[what] make a fresh clone a working checkout: generated docs, git hooks
+repo-prepare-dev-env: render-templates repo-ci-prepare-hooks
+##[<] Dev Environment
 
 ##[>] Docs [genai-include]
 #[what] render *.ontoRepo.tpl onto the repo (makefile.agents.md, repo-structure.md, CLAUDE.md, AGENTS.md)
