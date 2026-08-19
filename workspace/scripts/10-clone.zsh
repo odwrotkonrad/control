@@ -8,9 +8,15 @@ setopt errexit pipefail
 umask 002
 
 ##[>] 🤖🤖🤖
-#[why] token required: authenticates gitlab (CI sets it, clones over https).
-if [[ -z ${GITLAB_TOKEN-} ]] {
-  print -r -- "clone: skip: GITLAB_TOKEN unset"
+#[why] glab drives project discovery: without it there is nothing to enumerate
+if (( ! $+commands[glab] )) {
+  print -r -- "clone: skip: glab not found"
+  return 0
+}
+
+#[why] one probe covers every mechanism: glab reads its credential from its own config (host) or $GITLAB_TOKEN (image build, CI), and an authenticated api call is the only proof either works. `glab auth status` exits 0 on a rejected token, so it cannot decide this
+if { ! glab api /user >/dev/null 2>&1 } {
+  print -r -- "clone: skip: glab cannot authenticate (no usable gitlab credential)"
   return 0
 }
 

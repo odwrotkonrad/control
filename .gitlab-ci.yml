@@ -9,6 +9,7 @@ stages:
   - validate
   - verify
   - regen
+  - release
 
 #[why] all CI runs on the self-hosted GKE runners: no SaaS compute minutes remain. set once here so a
 #   new job inherits it instead of silently having no runner. gke-linux-amd64 resolves to the medium
@@ -75,4 +76,17 @@ regen-fan-out:
       - artifact: regen-pipeline.yml
         job: verify-prose-release
     strategy: depend
+
+#[why] a merge to the default branch is the release event: mint the next semver tag so consumers can
+#   pin a version instead of tracking a moving branch. tag only, no release object: nothing here ships
+#   an artifact
+tag-mint:
+  stage: release
+  image: $CI_IMAGE
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  variables:
+    GIT_DEPTH: "0"
+  script:
+    - make tag-mint
 ##[<] 🤖🤖

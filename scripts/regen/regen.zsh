@@ -34,9 +34,13 @@ case $producer in
   prose)
     pin_glob='*.yml'
     pin_pattern='prose[^ "]*\?ref=(v[0-9]+\.[0-9]+\.[0-9]+)' ;;
+  #[why] a tfvars line, not the old che/packages-pin.env: that pin lived inside the che module, so
+  #   raising it matched release-che's `changes: [che/**/*]` rule and cut a che release for a
+  #   catalog-only change. the version now reaches every repo as the CHE_PACKAGES_REF group CI
+  #   variable, and infra/iac's tfvars is the one file that declares its value
   che-packages)
-    pin_glob='*.env'
-    pin_pattern='CHE_PACKAGES_VERSION=v?([0-9]+\.[0-9]+\.[0-9]+)' ;;
+    pin_glob='*.tfvars'
+    pin_pattern='che_packages_ref *= *"v?([0-9]+\.[0-9]+\.[0-9]+)"' ;;
   *)
     print -ru2 -- "regen: unknown producer $producer"
     exit 2 ;;
