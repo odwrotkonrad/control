@@ -29,7 +29,8 @@ repositories:
     artifacts:
       - {name: sandbox, type: oci-image}
   - repo: notes
-    artifacts: []
+    artifacts:
+      - {name: purpose-doc, type: ai-prose}
   - repo: prose
     artifacts:
       - {name: conventions-doc, type: ai-prose}
@@ -90,7 +91,6 @@ edges:
     - infra/iac
     - infra/oci-images
     - infra/sandbox
-    - notes
     - resume-md-pdf
   prose/doc-templates:
     - che-packages
@@ -100,7 +100,6 @@ edges:
     - infra/iac
     - infra/oci-images
     - infra/sandbox
-    - notes
     - resume-md-pdf
   prose/license:
     - che-packages
@@ -110,7 +109,6 @@ edges:
     - infra/iac
     - infra/oci-images
     - infra/sandbox
-    - notes
     - resume-md-pdf
   prose/repo-prose:
     - che-packages
@@ -120,7 +118,6 @@ edges:
     - infra/iac
     - infra/oci-images
     - infra/sandbox
-    - notes
     - resume-md-pdf
   prose/shared-prose:
     - control
