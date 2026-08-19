@@ -4,7 +4,7 @@ set -euo pipefail
 
 repo_root=${0:a:h:h:h}
 graph=$repo_root/deps/deps-graph.yml
-ci_image=registry.gitlab.com/konradodwrot/infra/oci-images/ci-linux:latest
+ci_image='$GRP_VAR_ARTIFACT_REGISTRY/ci-linux:$GRP_VAR_CI_IMAGES_REF'
 runner_tag=gke-linux-amd64
 
 zparseopts -D -E -- -graph:=o_graph -produces:=o_prod -consumes:=o_cons -affected:=o_aff -emit-pipeline:=o_emit

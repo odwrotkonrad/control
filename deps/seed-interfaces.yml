@@ -40,6 +40,11 @@ repos:
     downstream:
       - {name: tf-lock, type: lockfile}
       - {name: purpose-doc, type: ai-prose}
+      - {name: ci-var/artifact-registry, type: ci-variable}
+      - {name: ci-var/ci-images-ref, type: ci-variable}
+      - {name: ci-var/che-packages-ref, type: ci-variable}
+      - {name: ci-var/che-backup-auto-create, type: ci-variable}
+      - {name: ci-var/enable-darwin-ci, type: ci-variable}
   infra/oci-images:
     upstream:
       - configs/llm/claude

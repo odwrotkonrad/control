@@ -26,7 +26,7 @@ if [[ -z $workdir ]] {
     exit 2
   }
   workdir=$(mktemp -d)/$repo:t
-  git clone --depth 1 https://control-maintainer:${CONTROL_GITLAB_TOKEN:?}@gitlab.com/$group/$repo.git $workdir
+  git clone --depth 1 https://control-maintainer:${REPO_VAR_CONTROL_GITLAB_TOKEN:?}@gitlab.com/$group/$repo.git $workdir
 }
 
 #[why] each producer writes its version somewhere different in its own format: prose into a che.yml
@@ -46,6 +46,9 @@ case $producer in
   che-packages)
     pin_glob='*.tfvars'
     pin_pattern='che_packages_ref *= *"v?([0-9]+\.[0-9]+\.[0-9]+)"' ;;
+  oci-images)
+    pin_glob='*.tfvars'
+    pin_pattern='ci_images_ref *= *"(latest|v?[0-9]+\.[0-9]+\.[0-9]+)"' ;;
   *)
     print -ru2 -- "regen: unknown producer $producer"
     exit 2 ;;
@@ -79,8 +82,15 @@ if [[ -z $old ]] {
 
 #[why] the tag as this repo spells its pin: $old carries the format, so the same release reads as
 #   v0.0.14 for prose and 0.0.14 for che-packages, matching what the file will hold
-shown_tag=${tag#v}
-if [[ $old == v* ]] shown_tag=v$shown_tag
+#[why] a non-semver seed carries no format to copy and no parts to compare: it spells the tag as
+#   the producer publishes it and counts as a major bump, so the first raise off it is reviewed
+if [[ $old != v* && $old != [0-9]* ]] {
+  shown_tag=$tag
+  bump=major
+} else {
+  shown_tag=${tag#v}
+  if [[ $old == v* ]] shown_tag=v$shown_tag
+}
 
 #[why] compared bare: prose writes the ref with a leading v, che-packages a bare version in tfvars,
 #   so "$old == $tag" put 0.0.13 against v0.0.13 and never matched. an already-current pin would
@@ -90,11 +100,13 @@ if [[ ${old#v} == ${tag#v} ]] {
   exit 0
 }
 
-old_parts=(${(s:.:)${old#v}})
-new_parts=(${(s:.:)${tag#v}})
-bump=patch
-(( new_parts[2] != old_parts[2] )) && bump=minor
-(( new_parts[1] != old_parts[1] )) && bump=major
+if [[ -z ${bump:-} ]] {
+  old_parts=(${(s:.:)${old#v}})
+  new_parts=(${(s:.:)${tag#v}})
+  bump=patch
+  (( new_parts[2] != old_parts[2] )) && bump=minor
+  (( new_parts[1] != old_parts[1] )) && bump=major
+}
 
 branch=$producer-$shown_tag
 #[why] the [automation] prefix is how other automation finds these MRs: matching a branch-name
@@ -149,6 +161,8 @@ for f in ${spec_files#$workdir/}; {
       sed -i.pinbak -E "s|(prose[^ \"]*\?ref=)v[0-9]+\.[0-9]+\.[0-9]+|\1$tag|g" $f ;;
     che-packages)
       sed -i.pinbak -E "s|(che_packages_ref[[:space:]]*=[[:space:]]*\")v?[0-9]+\.[0-9]+\.[0-9]+\"|\1${tag#v}\"|g" $f ;;
+    oci-images)
+      sed -i.pinbak -E "s|(ci_images_ref[[:space:]]*=[[:space:]]*\")(latest\|v?[0-9]+\.[0-9]+\.[0-9]+)\"|\1$tag\"|g" $f ;;
   esac
   command rm -f $f.pinbak
 }
