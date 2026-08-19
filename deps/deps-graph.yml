@@ -20,6 +20,11 @@ repositories:
   - repo: infra/iac
     artifacts:
       - {name: tf-lock, type: lockfile}
+      - {name: ci-var/artifact-registry, type: ci-variable}
+      - {name: ci-var/ci-images-ref, type: ci-variable}
+      - {name: ci-var/che-packages-ref, type: ci-variable}
+      - {name: ci-var/che-backup-auto-create, type: ci-variable}
+      - {name: ci-var/enable-darwin-ci, type: ci-variable}
   - repo: infra/oci-images
     artifacts:
       - {name: ci-linux, type: oci-image}
@@ -67,6 +72,23 @@ edges:
     - go-modules/che
     - go-modules/get-os-open-files-with
     - go-modules/get-term-open-files-with
+  infra/iac/ci-var/artifact-registry:
+    - che-packages
+    - configs
+    - infra/oci-images
+    - prose
+    - resume-md-pdf
+  infra/iac/ci-var/che-backup-auto-create:
+    - configs
+  infra/iac/ci-var/che-packages-ref:
+    - configs
+  infra/iac/ci-var/ci-images-ref:
+    - che-packages
+    - configs
+    - prose
+    - resume-md-pdf
+  infra/iac/ci-var/enable-darwin-ci:
+    - configs
   infra/iac/tf-lock:
     - infra/oci-images
   infra/oci-images/ci-linux:
