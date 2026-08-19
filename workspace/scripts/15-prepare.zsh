@@ -19,7 +19,7 @@ typeset root=${WORKSPACE_DIR:-$HOME/projects/gitlab}
 
 #[why] no errexit and an explicit success at the end: one unpreparable repo must never abort a
 #   session bootstrap or an image build, so every failure is reported and the pass continues
-typeset repo
+typeset repo out
 for repo in ${root}/**/.git(N/:h); do
   if [[ ! -f ${repo}/Makefile ]] {
     print -r -- "prepare: skip(no makefile): $repo"
@@ -30,10 +30,13 @@ for repo in ${root}/**/.git(N/:h); do
     print -r -- "prepare: skip(no target): $repo"
     continue
   }
-  if { make -C $repo repo-prepare-dev-env >/dev/null 2>&1 } {
+  #[why] output captured, not discarded: a success stays one quiet line, while a failure prints what
+  #   went wrong. a report saying only that a repo failed sends the reader back to run it by hand
+  if { out=$(make -C $repo repo-prepare-dev-env 2>&1) } {
     print -r -- "prepare: $repo"
   } else {
     print -r -- "prepare(fail): $repo"
+    print -r -- ${(F)${(f)out}/#/    }
   }
 done
 
