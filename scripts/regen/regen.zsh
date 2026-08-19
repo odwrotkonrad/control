@@ -176,7 +176,11 @@ git push -u origin $branch
 #   a 405. set at creation the flag is part of the same request and there is no gap to lose
 mr_args=(--title "$title" --description "Automated $producer regen: $old → $shown_tag ($bump bump)." --source-branch $branch --repo $group/$repo --remove-source-branch --yes)
 [[ $auto_merge == yes ]] && mr_args+=(--auto-merge)
-glab mr create $mr_args
+#[why] a failed create is not fatal here: when --auto-merge cannot be armed glab still creates the
+#   MR, then exits non-zero, and under set -e that killed the job before the arming retry below ever
+#   ran. The MR existed, correct and unarmed, while the pipeline reported failure. Whether the MR is
+#   really there is decided by looking it up, not by this exit code
+glab mr create $mr_args || print -r -- "regen: mr create reported failure, checking whether the MR exists"
 
 #[why] auto-merge only holds an MR whose pipeline is still running: one that already finished green
 #   has nothing left to wait on, and gitlab declines to arm rather than merging. a docs-only regen
@@ -191,6 +195,10 @@ glab mr create $mr_args
 outcome=""
 if [[ $auto_merge == yes ]] {
   mr_iid=$(glab api "projects/$project_path/merge_requests?source_branch=$branch&state=opened" | yq -r '.[0].iid')
+  if [[ -z $mr_iid || $mr_iid == null ]] {
+    print -ru2 -- "$repo: no open MR for $branch, create really did fail"
+    exit 1
+  }
   mr_api="projects/$project_path/merge_requests/$mr_iid"
   mr=$(glab api $mr_api)
   if [[ $(print -r -- "$mr" | yq -r '.merge_when_pipeline_succeeds // false') == true ]] {
