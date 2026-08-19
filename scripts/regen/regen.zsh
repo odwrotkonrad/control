@@ -15,6 +15,11 @@ zparseopts -D -E -- -repo:=o_repo -tag:=o_tag -prev:=o_prev -workdir:=o_wd -prod
 
 [[ -n $repo && -n $tag ]] || { print "usage: regen.zsh --repo <repo> --tag <vX.Y.Z> [--prev <tag>] [--workdir <dir>] [--producer <name>] [--dry-run]" >&2; exit 2 }
 
+#[why] every slash encoded, not just the group separator: a subgroup repo like infra/iac made
+#   "$group%2F$repo" into konradodwrot%2Finfra/iac, whose inner slash GitLab reads as a path
+#   segment, so every merge_requests call 404'd and the regen died after cloning
+project_path=${${group}//\//%2F}%2F${repo//\//%2F}
+
 if [[ -z $workdir ]] {
   if (( dry )) {
     print "regen --dry-run needs --workdir <checkout> (no clone in dry-run)" >&2
@@ -116,12 +121,12 @@ if (( dry )) {
 #[why] the producer is interpolated by the shell, not passed via env(): yq does not evaluate env()
 #   as a regex inside test(), so the pattern was empty and matched every title, hand-written ones
 #   included
-stale=$(glab api "projects/$group%2F$repo/merge_requests?state=opened&per_page=100" \
+stale=$(glab api "projects/$project_path/merge_requests?state=opened&per_page=100" \
   | yq -r ".[] | select(.title | test(\"^\\\\[automation\\\\] chore\\\\(${producer}\\\\): \")) | select(.title | test(\"→ v[0-9]+[.]0[.]0\$\") | not) | [.iid, .title] | @tsv")
 if [[ -n $stale ]] {
   while IFS=$'\t' read -r iid stale_title; do
     [[ -n $iid ]] || continue
-    glab api -X PUT "projects/$group%2F$repo/merge_requests/$iid" -f state_event=close >/dev/null \
+    glab api -X PUT "projects/$project_path/merge_requests/$iid" -f state_event=close >/dev/null \
       && print "$repo: closed superseded !$iid ($stale_title)" \
       || print "$repo: could not close superseded !$iid ($stale_title)"
   done <<< $stale
@@ -130,12 +135,12 @@ if [[ -n $stale ]] {
 cd $workdir
 for f in ${spec_files#$workdir/}; {
   #[why] the pin is written back in the producer's own format: prose carries the leading v in the
-  #   ref, che-packages stores a bare version the vendor script interpolates into a URL
+  #   ref, che-packages a bare version in a quoted tfvars string
   case $producer in
     prose)
       sed -i.pinbak -E "s|(prose[^ \"]*\?ref=)v[0-9]+\.[0-9]+\.[0-9]+|\1$tag|g" $f ;;
     che-packages)
-      sed -i.pinbak -E "s|(CHE_PACKAGES_VERSION=)v?[0-9]+\.[0-9]+\.[0-9]+|\1${tag#v}|g" $f ;;
+      sed -i.pinbak -E "s|(che_packages_ref[[:space:]]*=[[:space:]]*\")v?[0-9]+\.[0-9]+\.[0-9]+\"|\1${tag#v}\"|g" $f ;;
   esac
   command rm -f $f.pinbak
 }
@@ -177,8 +182,8 @@ glab mr create $mr_args
 #   something that silently merged or silently stalled
 outcome=""
 if [[ $auto_merge == yes ]] {
-  mr_iid=$(glab api "projects/$group%2F$repo/merge_requests?source_branch=$branch&state=opened" | yq -r '.[0].iid')
-  mr_api="projects/$group%2F$repo/merge_requests/$mr_iid"
+  mr_iid=$(glab api "projects/$project_path/merge_requests?source_branch=$branch&state=opened" | yq -r '.[0].iid')
+  mr_api="projects/$project_path/merge_requests/$mr_iid"
   mr=$(glab api $mr_api)
   if [[ $(print -r -- "$mr" | yq -r '.merge_when_pipeline_succeeds // false') == true ]] {
     outcome="auto-merge armed"
