@@ -75,20 +75,28 @@ edges:
   infra/iac/ci-var/artifact-registry:
     - che-packages
     - configs
+    - control
+    - go-modules
     - infra/oci-images
+    - infra/sandbox
     - prose
     - resume-md-pdf
   infra/iac/ci-var/che-backup-auto-create:
     - configs
   infra/iac/ci-var/che-packages-ref:
     - configs
+    - go-modules
   infra/iac/ci-var/ci-images-ref:
     - che-packages
     - configs
+    - control
+    - go-modules
+    - infra/sandbox
     - prose
     - resume-md-pdf
   infra/iac/ci-var/enable-darwin-ci:
     - configs
+    - go-modules
   infra/iac/tf-lock:
     - infra/oci-images
   infra/oci-images/ci-linux:
