@@ -26,7 +26,7 @@ if [[ -z $workdir ]] {
     exit 2
   }
   workdir=$(mktemp -d)/$repo:t
-  git clone --depth 1 https://control-maintainer:${CONTROL_GITLAB_TOKEN:?}@gitlab.com/$group/$repo.git $workdir
+  git clone --depth 1 https://control-maintainer:${REPO_VAR_CONTROL_GITLAB_TOKEN:?}@gitlab.com/$group/$repo.git $workdir
 }
 
 #[why] each producer writes its version somewhere different in its own format: prose into a che.yml
@@ -46,6 +46,9 @@ case $producer in
   che-packages)
     pin_glob='*.tfvars'
     pin_pattern='che_packages_ref *= *"v?([0-9]+\.[0-9]+\.[0-9]+)"' ;;
+  oci-images)
+    pin_glob='*.tfvars'
+    pin_pattern='ci_images_ref *= *"(v?[0-9]+\.[0-9]+\.[0-9]+)"' ;;
   *)
     print -ru2 -- "regen: unknown producer $producer"
     exit 2 ;;
@@ -149,6 +152,8 @@ for f in ${spec_files#$workdir/}; {
       sed -i.pinbak -E "s|(prose[^ \"]*\?ref=)v[0-9]+\.[0-9]+\.[0-9]+|\1$tag|g" $f ;;
     che-packages)
       sed -i.pinbak -E "s|(che_packages_ref[[:space:]]*=[[:space:]]*\")v?[0-9]+\.[0-9]+\.[0-9]+\"|\1${tag#v}\"|g" $f ;;
+    oci-images)
+      sed -i.pinbak -E "s|(ci_images_ref[[:space:]]*=[[:space:]]*\")v?[0-9]+\.[0-9]+\.[0-9]+\"|\1$tag\"|g" $f ;;
   esac
   command rm -f $f.pinbak
 }

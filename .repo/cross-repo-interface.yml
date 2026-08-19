@@ -6,6 +6,8 @@ upstream:
   - prose/shared-prose
   - prose/doc-templates
   - prose/license
+  - infra/iac/ci-var/artifact-registry
+  - infra/iac/ci-var/ci-images-ref
 downstream:
   - {name: deps-graph, type: dataset}
   - {name: workspace, type: che-profile}

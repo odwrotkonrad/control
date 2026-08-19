@@ -30,7 +30,7 @@ default:
     - gke-linux-amd64
 
 variables:
-  CI_IMAGE: registry.gitlab.com/konradodwrot/infra/oci-images/ci-linux:latest
+  CI_IMAGE: $GRP_VAR_ARTIFACT_REGISTRY/ci-linux:$GRP_VAR_CI_IMAGES_REF
 
 validate-pre-commit-all:
   stage: validate
