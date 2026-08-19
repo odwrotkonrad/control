@@ -77,8 +77,16 @@ if [[ -z $old ]] {
   exit 0
 }
 
-if [[ $old == $tag ]] {
-  print "$repo: already pinned to $tag"
+#[why] the tag as this repo spells its pin: $old carries the format, so the same release reads as
+#   v0.0.14 for prose and 0.0.14 for che-packages, matching what the file will hold
+shown_tag=${tag#v}
+if [[ $old == v* ]] shown_tag=v$shown_tag
+
+#[why] compared bare: prose writes the ref with a leading v, che-packages a bare version in tfvars,
+#   so "$old == $tag" put 0.0.13 against v0.0.13 and never matched. an already-current pin would
+#   open a no-op MR titled "0.0.13 → v0.0.13"
+if [[ ${old#v} == ${tag#v} ]] {
+  print "$repo: already pinned to $shown_tag"
   exit 0
 }
 
@@ -88,20 +96,20 @@ bump=patch
 (( new_parts[2] != old_parts[2] )) && bump=minor
 (( new_parts[1] != old_parts[1] )) && bump=major
 
-branch=$producer-$tag
+branch=$producer-$shown_tag
 #[why] the [automation] prefix is how other automation finds these MRs: matching a branch-name
 #   pattern instead once selected hand-written MRs from three unrelated repos
-title="[automation] chore($producer): $old → $tag"
+title="[automation] chore($producer): $old → $shown_tag"
 auto_merge=$([[ $bump == major ]] && print no || print yes)
 
 if (( dry )) {
   print "DRY RUN: regen plan for $repo"
-  print "  pin:        $old → $tag ($bump bump)"
+  print "  pin:        $old → $shown_tag ($bump bump)"
   print "  render:     make render-templates in $workdir"
   print "  supersede:  close open [automation] $producer MRs (except major bumps)"
   print "  branch:     $branch"
   print "  MR title:   $title"
-  print "  MR body:    Automated $producer regen: $old → $tag ($bump bump)."
+  print "  MR body:    Automated $producer regen: $old → $shown_tag ($bump bump)."
   print "  auto-merge: $auto_merge (set at creation, patch/minor only)"
   exit 0
 }
@@ -166,7 +174,7 @@ git push -u origin $branch
 #[why] --auto-merge on the create call, not a merge request afterwards: gitlab attaches the pipeline a
 #   second or two after the MR exists, so every after-the-fact arming attempt races that gap and gets
 #   a 405. set at creation the flag is part of the same request and there is no gap to lose
-mr_args=(--title "$title" --description "Automated $producer regen: $old → $tag ($bump bump)." --source-branch $branch --repo $group/$repo --remove-source-branch --yes)
+mr_args=(--title "$title" --description "Automated $producer regen: $old → $shown_tag ($bump bump)." --source-branch $branch --repo $group/$repo --remove-source-branch --yes)
 [[ $auto_merge == yes ]] && mr_args+=(--auto-merge)
 glab mr create $mr_args
 
@@ -242,5 +250,5 @@ if [[ $auto_merge == yes ]] {
 } else {
   outcome="major bump, awaiting human review"
 }
-print "$repo: regen MR opened ($old → $tag): $outcome"
+print "$repo: regen MR opened ($old → $shown_tag): $outcome"
 ##[<] 🤖🤖🤖
