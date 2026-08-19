@@ -1,5 +1,8 @@
 ##[>] 🤖
 repositories:
+  - repo: che-packages
+    artifacts:
+      - {name: catalog, type: dataset}
   - repo: configs
     artifacts:
       - {name: zsh/base-linux, type: che-profile}
@@ -38,6 +41,9 @@ repositories:
     artifacts:
       - {name: styled-resume-pdf, type: pdf}
 edges:
+  che-packages/catalog:
+    - go-modules
+    - infra/iac
   configs/llm/claude:
     - go-modules
     - infra/iac
@@ -51,6 +57,7 @@ edges:
   control/workspace:
     - configs
   go-modules/che:
+    - che-packages
     - configs
     - infra/oci-images/ci-linux
     - infra/oci-images/dev-sandbox
@@ -62,6 +69,7 @@ edges:
   infra/iac/tf-lock:
     - infra/oci-images
   infra/oci-images/ci-linux:
+    - che-packages
     - configs
     - control
     - go-modules
@@ -72,8 +80,10 @@ edges:
     - prose
     - resume-md-pdf
   infra/oci-images/ci-linux-dind:
+    - che-packages
     - go-modules
   prose/conventions-doc:
+    - che-packages
     - configs
     - control
     - go-modules
@@ -83,6 +93,7 @@ edges:
     - notes
     - resume-md-pdf
   prose/doc-templates:
+    - che-packages
     - configs
     - control
     - go-modules
@@ -92,6 +103,7 @@ edges:
     - notes
     - resume-md-pdf
   prose/license:
+    - che-packages
     - configs
     - control
     - go-modules
@@ -101,6 +113,7 @@ edges:
     - notes
     - resume-md-pdf
   prose/repo-prose:
+    - che-packages
     - configs
     - control
     - go-modules
