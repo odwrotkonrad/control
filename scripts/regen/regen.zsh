@@ -26,7 +26,7 @@ if [[ -z $workdir ]] {
     exit 2
   }
   workdir=$(mktemp -d)/$repo:t
-  git clone --depth 1 https://control-maintainer:${REPO_VAR_CONTROL_GITLAB_TOKEN:?}@gitlab.com/$group/$repo.git $workdir
+  git clone --depth 1 https://control-maintainer:${CONTROL_GITLAB_TOKEN:?}@gitlab.com/$group/$repo.git $workdir
 }
 
 #[why] each producer writes its version somewhere different in its own format: prose into a che.yml
@@ -36,9 +36,13 @@ if [[ -z $workdir ]] {
 #   in profiles/llm/claude/che.yml, and a list naming only the first two left the third at v0.0.4
 #   while the repo moved to v0.0.22. A pin the fan-out does not look at is a pin that rots
 case $producer in
+  #[why] one tfvars line in infra/iac, published as the GRP_KO_VAR_PROSE_REF group variable: every
+  #   consumer reads PROSE_REF from its environment, so a consumer carries no pin to move. a consumer
+  #   regen is content-only: render at the new tag, commit what changed
   prose)
-    pin_glob='*.yml'
-    pin_pattern='prose[^ "]*\?ref=(v[0-9]+\.[0-9]+\.[0-9]+)' ;;
+    pin_glob='*.tfvars'
+    pin_pattern='prose_ref *= *"(v[0-9]+\.[0-9]+\.[0-9]+)"'
+    export PROSE_REF=$tag ;;
   #[why] a tfvars line, not the old che/packages-pin.env: that pin lived inside the che module, so
   #   raising it matched release-che's `changes: [che/**/*]` rule and cut a che release for a
   #   catalog-only change. the version now reaches every repo as the CHE_PACKAGES_REF group CI
@@ -62,32 +66,43 @@ for f in ${(f)"$(cd $workdir && git ls-files -- $pin_glob '**/'$pin_glob 2>/dev/
   grep -qE -- "$pin_pattern" $workdir/$f 2>/dev/null && spec_files+=($workdir/$f)
 }
 
+content_only=0
 if (( ! ${#spec_files} )) {
-  print "$repo: no $producer pin file, nothing to regen"
-  exit 0
+  if [[ $producer == prose ]] {
+    content_only=1
+  } else {
+    print "$repo: no $producer pin file, nothing to regen"
+    exit 0
+  }
 }
 
 old=""
-for f in $spec_files; {
-  for line in ${(f)"$(<$f)"}; {
-    [[ $line =~ $pin_pattern ]] || continue
-    old=$match[1]
-    break 2
+if (( ! content_only )) {
+  for f in $spec_files; {
+    for line in ${(f)"$(<$f)"}; {
+      [[ $line =~ $pin_pattern ]] || continue
+      old=$match[1]
+      break 2
+    }
+  }
+  if [[ -z $old ]] {
+    print "$repo: no $producer pin found, nothing to regen"
+    exit 0
   }
 }
-if [[ -z $old ]] {
-  print "$repo: no $producer pin found, nothing to regen"
-  exit 0
-}
 
-#[why] the tag as this repo spells its pin: $old carries the format, so the same release reads as
-#   v0.0.14 for prose and 0.0.14 for che-packages, matching what the file will hold
-#[why] a non-semver seed carries no format to copy and no parts to compare: it spells the tag as
-#   the producer publishes it and counts as a major bump, so the first raise off it is reviewed
-if [[ $old != v* && $old != [0-9]* ]] {
+if (( content_only )) {
+  shown_tag=$tag
+  bump=patch
+  old=${prev:-none}
+} elif [[ $old != v* && $old != [0-9]* ]] {
+  #[why] a non-semver seed carries no format to copy and no parts to compare: it spells the tag as
+  #   the producer publishes it and counts as a major bump, so the first raise off it is reviewed
   shown_tag=$tag
   bump=major
 } else {
+  #[why] the tag as this repo spells its pin: $old carries the format, so the same release reads as
+  #   v0.0.14 for prose and 0.0.14 for che-packages, matching what the file will hold
   shown_tag=${tag#v}
   if [[ $old == v* ]] shown_tag=v$shown_tag
 }
@@ -95,7 +110,7 @@ if [[ $old != v* && $old != [0-9]* ]] {
 #[why] compared bare: prose writes the ref with a leading v, che-packages a bare version in tfvars,
 #   so "$old == $tag" put 0.0.13 against v0.0.13 and never matched. an already-current pin would
 #   open a no-op MR titled "0.0.13 → v0.0.13"
-if [[ ${old#v} == ${tag#v} ]] {
+if (( ! content_only )) && [[ ${old#v} == ${tag#v} ]] {
   print "$repo: already pinned to $shown_tag"
   exit 0
 }
@@ -158,7 +173,7 @@ for f in ${spec_files#$workdir/}; {
   #   ref, che-packages a bare version in a quoted tfvars string
   case $producer in
     prose)
-      sed -i.pinbak -E "s|(prose[^ \"]*\?ref=)v[0-9]+\.[0-9]+\.[0-9]+|\1$tag|g" $f ;;
+      sed -i.pinbak -E "s|(prose_ref[[:space:]]*=[[:space:]]*\")v?[0-9]+\.[0-9]+\.[0-9]+\"|\1$tag\"|g" $f ;;
     che-packages)
       sed -i.pinbak -E "s|(che_packages_ref[[:space:]]*=[[:space:]]*\")v?[0-9]+\.[0-9]+\.[0-9]+\"|\1${tag#v}\"|g" $f ;;
     oci-images)
@@ -171,6 +186,9 @@ for f in ${spec_files#$workdir/}; {
 #   credentials, so resolving them is both impossible and pointless, and iac's ontoRepo profile
 #   rendering .env alongside its docs failed the whole render on the first op:// ref it met
 export CHE_RENDER_TEMPLATES_SKIP_SECRETS=true
+#[why] a template shelling out (the .env seed's glab call) wants a host's glab login, which this job
+#   has no business carrying: PROSE_REF is exported above, so nothing the seed would fetch is missing
+export CHE_RENDER_TEMPLATES_SKIP_VARIABLES=true
 #[why] pick the target the repo actually defines, rather than running one and falling back on
 #   failure: only configs names it repo-render-templates, every other repo names it
 #   render-templates. The old `render-templates || repo-render-templates` masked any real render
@@ -181,6 +199,12 @@ print -r -- "regen: rendering via make $render_target"
 make $render_target
 git checkout -b $branch
 git add -A
+#[why] a content-only regen may find the release changed nothing this repo renders: an empty commit
+#   would fail, and an MR carrying no diff is noise
+if git diff --cached --quiet; then
+  print "$repo: nothing rendered differently at $shown_tag, no MR"
+  exit 0
+fi
 #[why] the ci container carries no git identity and the commit is the bot's, not a person's: name it from the
 #   job's own identity so the regen MR's authorship points back at the pipeline that opened it
 git -c user.name="${GITLAB_USER_NAME:-control-maintainer}" -c user.email="${GITLAB_USER_EMAIL:-control-maintainer@noreply.gitlab.com}" commit -m "$title"
