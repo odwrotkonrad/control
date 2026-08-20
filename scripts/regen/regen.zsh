@@ -192,11 +192,6 @@ for f in ${spec_files#$workdir/}; {
   esac
   command rm -f $f.pinbak
 }
-#[why] regen commits tracked docs, and no tracked doc carries a secret: the op:// refs live in
-#   gitignored local .env templates a repo renders for its developers. this job holds no 1Password
-#   credentials, so resolving them is both impossible and pointless, and iac's ontoRepo profile
-#   rendering .env alongside its docs failed the whole render on the first op:// ref it met
-export CHE_RENDER_TEMPLATES_SKIP_SECRETS=true
 #[why] pick the target the repo actually defines, rather than running one and falling back on
 #   failure: only configs names it repo-render-templates, every other repo names it
 #   render-templates. The old `render-templates || repo-render-templates` masked any real render
