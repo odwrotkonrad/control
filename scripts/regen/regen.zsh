@@ -123,10 +123,21 @@ if [[ -z ${bump:-} ]] {
   (( new_parts[1] != old_parts[1] )) && bump=major
 }
 
-branch=$producer-$shown_tag
 #[why] the [automation] prefix is how other automation finds these MRs: matching a branch-name
 #   pattern instead once selected hand-written MRs from three unrelated repos
-title="[automation] chore($producer): $old → $shown_tag"
+#[why] a content-only regen moves no pin, so "old → new" would name a transition the repo never
+#   had: it is a docs-gen MR rendered at the producer's tag, titled as such
+if (( content_only )) {
+  scope=docs-gen
+  branch=docs-gen-$producer-$shown_tag
+  title="[automation] chore(docs-gen): render at $producer $shown_tag"
+  body="Automated docs regen: rendered at $producer $shown_tag."
+} else {
+  scope=$producer
+  branch=$producer-$shown_tag
+  title="[automation] chore($producer): $old → $shown_tag"
+  body="Automated $producer regen: $old → $shown_tag ($bump bump)."
+}
 auto_merge=$([[ $bump == major ]] && print no || print yes)
 
 if (( dry )) {
@@ -136,7 +147,7 @@ if (( dry )) {
   print "  supersede:  close open [automation] $producer MRs (except major bumps)"
   print "  branch:     $branch"
   print "  MR title:   $title"
-  print "  MR body:    Automated $producer regen: $old → $shown_tag ($bump bump)."
+  print "  MR body:    $body"
   print "  auto-merge: $auto_merge (set at creation, patch/minor only)"
   exit 0
 }
@@ -157,7 +168,7 @@ if (( dry )) {
 #   as a regex inside test(), so the pattern was empty and matched every title, hand-written ones
 #   included
 stale=$(glab api "projects/$project_path/merge_requests?state=opened&per_page=100" \
-  | yq -r ".[] | select(.title | test(\"^\\\\[automation\\\\] chore\\\\(${producer}\\\\): \")) | select(.title | test(\"→ v[0-9]+[.]0[.]0\$\") | not) | [.iid, .title] | @tsv")
+  | yq -r ".[] | select(.title | test(\"^\\\\[automation\\\\] chore\\\\(${scope}\\\\): \")) | select(.title | test(\"→ v[0-9]+[.]0[.]0\$\") | not) | [.iid, .title] | @tsv")
 if [[ -n $stale ]] {
   while IFS=$'\t' read -r iid stale_title; do
     [[ -n $iid ]] || continue
@@ -186,9 +197,6 @@ for f in ${spec_files#$workdir/}; {
 #   credentials, so resolving them is both impossible and pointless, and iac's ontoRepo profile
 #   rendering .env alongside its docs failed the whole render on the first op:// ref it met
 export CHE_RENDER_TEMPLATES_SKIP_SECRETS=true
-#[why] a template shelling out (the .env seed's glab call) wants a host's glab login, which this job
-#   has no business carrying: PROSE_REF is exported above, so nothing the seed would fetch is missing
-export CHE_RENDER_TEMPLATES_SKIP_VARIABLES=true
 #[why] pick the target the repo actually defines, rather than running one and falling back on
 #   failure: only configs names it repo-render-templates, every other repo names it
 #   render-templates. The old `render-templates || repo-render-templates` masked any real render
@@ -212,7 +220,7 @@ git push -u origin $branch
 #[why] --auto-merge on the create call, not a merge request afterwards: gitlab attaches the pipeline a
 #   second or two after the MR exists, so every after-the-fact arming attempt races that gap and gets
 #   a 405. set at creation the flag is part of the same request and there is no gap to lose
-mr_args=(--title "$title" --description "Automated $producer regen: $old → $shown_tag ($bump bump)." --source-branch $branch --repo $group/$repo --remove-source-branch --yes)
+mr_args=(--title "$title" --description "$body" --source-branch $branch --repo $group/$repo --remove-source-branch --yes)
 [[ $auto_merge == yes ]] && mr_args+=(--auto-merge)
 #[why] a failed create is not fatal here: when --auto-merge cannot be armed glab still creates the
 #   MR, then exits non-zero, and under set -e that killed the job before the arming retry below ever
