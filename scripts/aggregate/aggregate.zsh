@@ -23,7 +23,7 @@ seed_repos=(${(f)"$(yq '.repos | keys | .[]' $seed_file)"})
 
 declared_repos=()
 if [[ -n $local_ws ]] {
-  for f in $local_ws/*/$iface_path(N) $local_ws/*/*/$iface_path(N); {
+  for f in $local_ws/**/$iface_path(N); {
     declared_repos+=(${${f%/$iface_path}#$local_ws/})
   }
 } else {

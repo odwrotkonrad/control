@@ -65,23 +65,21 @@ if (( ${#o_aff} )) {
   exit 0
 }
 
-#[why] the producer is a parameter, not always prose: che-packages publishes a catalog go-modules
-#   pins, and the same fan-out has to carry that version too. PRODUCER defaults to prose so the
-#   prose tag bridge keeps working unchanged, and PROSE_TAG stays accepted as its alias
-producer=${PRODUCER:-prose}
-tag=${RELEASE_TAG:-${PROSE_TAG:-}}
-[[ -n $tag ]] || { print -ru2 -- "RELEASE_TAG (or PROSE_TAG) unset and no query flag given"; exit 1 }
-prev=${RELEASE_PREV_TAG:-${PROSE_PREV_TAG:-}}
+producer=${PRODUCER:-}
+tag=${RELEASE_TAG:-}
+artifact=${PRODUCER_ARTIFACT:-}
+[[ -n $producer && -n $tag && -n $artifact ]] || { print -ru2 -- "PRODUCER, RELEASE_TAG and PRODUCER_ARTIFACT must all be set when no query flag is given"; exit 1 }
+prev=${RELEASE_PREV_TAG:-}
 
 #[why] the artifact, not the repo: a repo that publishes several things has one edge per artifact,
 #   and only the consumers of the released one should be regenerated
-work=(${(f)"$(affected ${PRODUCER_ARTIFACT:-$producer})"})
+work=(${(f)"$(affected $artifact)"})
 
-#[why] the version lives in one place, infra/iac's tfvars, published as a group variable every
+#[why] the version lives in one place, iac's tfvars, published as a group variable every
 #   consumer's pipeline reads. a consumer rendered at the new tag before that variable moved would
 #   fail its own docsgen check (its CI renders at the old value), so the pin lands first and every
 #   content regen waits for the variable to carry the tag before it renders
-pin_repo=infra/iac
+pin_repo=cross-repo/infra/iac
 has_pin=0
 (( ${work[(Ie)$pin_repo]} )) && has_pin=1
 

@@ -65,5 +65,27 @@ function walk {
   return 0
 }
 
+function write_code_workspace {
+  local out=${root}/gitlab.code-workspace repo rel
+  local -a repos=(${root}/**/.git(N/:h))
+  [[ -L $out ]] && command rm -f $out
+  {
+    print '{'
+    print '  "folders": ['
+    local i=0
+    for repo in ${(o)repos}; do
+      rel=${repo#${root}/}
+      (( i++ )) && print ','
+      print -rn -- "    { \"name\": \"${rel#*/}\", \"path\": \"${rel}\" }"
+    done
+    print ''
+    print '  ],'
+    print '  "settings": {}'
+    print '}'
+  } > $out
+  print -r -- "index: $out (${#repos} repos)"
+}
+
 walk $root
+write_code_workspace
 ##[<] 🤖🤖🤖

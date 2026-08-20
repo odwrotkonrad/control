@@ -85,6 +85,48 @@ function sync_project {
   print -r -- "sync(updated): $dest"
 }
 
+function relocate_moved_clones {
+  local group=$1 host_dir=$2 gitdir clone origin ns dest
+  for gitdir in ${root}/${host_dir}/**/.git(N/); do
+    clone=${gitdir:h}
+    origin=$(git -C $clone remote get-url origin 2>/dev/null) || continue
+    ns=${${${origin##*gitlab.com[:/]}%.git}#/}
+    [[ $ns == ${group}/* ]] || continue
+    ns=$(glab api "projects/${ns//\//%2F}" 2>/dev/null | jq -r '.path_with_namespace // empty') || continue
+    [[ -n $ns ]] || continue
+    dest=${root}/${host_dir}/${ns#${group}/}
+    [[ $dest == $clone ]] && continue
+    if [[ -n "$(git -C $clone status --porcelain)" ]] {
+      print -r -- "relocate(skip: dirty): $clone -> $dest"
+      continue
+    }
+    if [[ -e $dest ]] {
+      print -r -- "relocate(skip: dest exists): $clone -> $dest"
+      continue
+    }
+    mkdir -p ${dest:h}
+    mv $clone $dest
+    git -C $dest remote set-url origin ${origin/${origin##*gitlab.com[:/]}/${ns}.git}
+    print -r -- "relocate: $clone -> $dest"
+  done
+}
+
+function remove_empty_shells {
+  local dir
+  for dir in ${root}/**/assets/data/repo-index.md(N:h:h:h); do
+    [[ -d $dir/.git ]] && continue
+    local hits=($dir/**/.git(N/))
+    (( $#hits )) && continue
+    command rm -f $dir/assets/data/repo-index.md $dir/AGENTS.md $dir/CLAUDE.md
+    rmdir $dir/assets/data $dir/assets $dir 2>/dev/null
+    if [[ -d $dir ]] {
+      print -r -- "shell(kept: not empty): $dir"
+    } else {
+      print -r -- "shell(removed): $dir"
+    }
+  done
+}
+
 #[why] CI has no ssh key: clone over https with the token
 typeset url_field=ssh_url_to_repo
 if (( ${+CI} )) url_field=http_url_to_repo
@@ -93,6 +135,8 @@ typeset pair group host_dir
 for pair in $groups; do
   group=${pair%%:*}
   host_dir=${pair#*:}
+
+  relocate_moved_clones $group $host_dir
 
   glab api --paginate \
     "groups/${group}/projects?include_subgroups=true&archived=false" \
@@ -103,4 +147,6 @@ for pair in $groups; do
         if { ! sync_project $dest_rel $branch $url } print -r -- "sync(fail): ${root}/${dest_rel}"
       done
 done
+
+remove_empty_shells
 ##[<] 🤖🤖🤖
