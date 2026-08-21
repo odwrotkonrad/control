@@ -9,7 +9,7 @@ class EventTest < Minitest::Test
     event = Automation::Event.parse(File.read("#{FIXTURE}/release-published.json"))
     assert_equal 'release.published', event.type
     assert_equal 'konradodwrot/cross-repo/prose/assets', event.source['project']
-    assert_equal 'v0.0.45', event.details['tag']
+    assert_equal 'v0.0.45', event.tag
     assert_equal 'prose-assets v0.0.45', event.summary
   end
 
@@ -27,7 +27,7 @@ class EventTest < Minitest::Test
   def test_rejects_missing_fields
     json = '{"type":"release.published","source":{"project":"p"},"details":{"producer":"misc"}}'
     err = assert_raises(ArgumentError) { Automation::Event.parse(json) }
-    assert_equal 'release.published event missing source.pipeline, source.ref, source.sha, details.artifact, details.tag', err.message
+    assert_equal 'release.published event missing source.pipeline, source.ref, source.sha, details.artifact', err.message
   end
 
   def test_rejects_no_type

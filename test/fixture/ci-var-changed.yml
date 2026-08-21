@@ -10,7 +10,7 @@ regen:ai-sandbox:
   variables:
     CONTROL_GITLAB_TOKEN: $REPO_VAR_CONTROL_GITLAB_TOKEN
   script:
-    - bin/automation regen --repo ai-sandbox --tag v0.0.45 --producer prose-assets --prev v0.0.44
+    - "bin/automation regen --repo ai-sandbox --tag v0.0.45 --producer prose-assets --prev v0.0.44"
 regen:configs:
   stage: regen
   image: $ARTIFACT_REGISTRY/ci-linux:$CI_IMAGES_REF
@@ -19,7 +19,7 @@ regen:configs:
   variables:
     CONTROL_GITLAB_TOKEN: $REPO_VAR_CONTROL_GITLAB_TOKEN
   script:
-    - bin/automation regen --repo configs --tag v0.0.45 --producer prose-assets --prev v0.0.44
+    - "bin/automation regen --repo configs --tag v0.0.45 --producer prose-assets --prev v0.0.44"
 regen:cross-repo/automation:
   stage: regen
   image: $ARTIFACT_REGISTRY/ci-linux:$CI_IMAGES_REF
@@ -28,4 +28,4 @@ regen:cross-repo/automation:
   variables:
     CONTROL_GITLAB_TOKEN: $REPO_VAR_CONTROL_GITLAB_TOKEN
   script:
-    - bin/automation regen --repo cross-repo/automation --tag v0.0.45 --producer prose-assets --prev v0.0.44
+    - "bin/automation regen --repo cross-repo/automation --tag v0.0.45 --producer prose-assets --prev v0.0.44"
