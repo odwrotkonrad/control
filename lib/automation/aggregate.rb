@@ -73,14 +73,14 @@ module Automation
     def self.fetch_remote(group, repo)
       project = CGI.escape("#{group}/#{repo}")
       res = Net::HTTP.get_response(URI("#{API}/projects/#{project}/repository/files/#{CGI.escape(IFACE_PATH)}/raw?ref=main"))
-      res.is_a?(Net::HTTPSuccess) ? res.body : nil
+      res.is_a?(Net::HTTPSuccess) ? res.body.force_encoding("UTF-8") : nil
     end
 
     def self.run(seed_file:, graph_file:, out:, check:, group:, local: nil)
-      seeds = YAML.safe_load(File.read(seed_file)).fetch('repos')
+      seeds = YAML.safe_load(File.read(seed_file, encoding: "UTF-8")).fetch('repos')
       candidates = (seeds.keys + (local ? declared_local(local) : declared_remote(group))).uniq.sort
       declared = candidates.to_h do |repo|
-        body = local ? (File.read(File.join(local, repo, IFACE_PATH)) if File.file?(File.join(local, repo, IFACE_PATH))) : fetch_remote(group, repo)
+        body = local ? (File.read(File.join(local, repo, IFACE_PATH), encoding: "UTF-8") if File.file?(File.join(local, repo, IFACE_PATH))) : fetch_remote(group, repo)
         [repo, body]
       end.compact.transform_values { |body| YAML.safe_load(body) }.reject { |_, v| v.nil? }
       repos = combine(seeds, declared)
@@ -91,7 +91,7 @@ module Automation
       graph = render(repos)
       summary = "declared: #{declared.empty? ? 'none' : declared.keys.join(' ')}, seeded: #{candidates.size - declared.size} repos"
       if check
-        current = File.read(graph_file)
+        current = File.read(graph_file, encoding: "UTF-8")
         if current != graph
           warn diff(current, graph)
           abort 'deps/deps-graph.yml drifted, rerun bin/automation aggregate (diff above)'

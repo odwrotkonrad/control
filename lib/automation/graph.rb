@@ -5,7 +5,7 @@ module Automation
   # Graph answers consumer and producer queries over deps/deps-graph.yml.
   class Graph
     def self.load(path)
-      new(YAML.safe_load(File.read(path)))
+      new(YAML.safe_load(File.read(path, encoding: "UTF-8")))
     end
 
     def initialize(doc)
