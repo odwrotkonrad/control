@@ -103,10 +103,9 @@ module Automation
     end
 
     def open_mr(plan)
-      args = ['glab', 'mr', 'create', '--title', plan.title, '--description', plan.body, '--source-branch', plan.branch,
-              '--repo', "#{@group}/#{@repo}", '--remove-source-branch', '--yes']
-      args << '--auto-merge' if plan.auto_merge?
-      Shell.run(*args, allow_failure: true) || puts('regen: mr create reported failure, checking whether the MR exists')
+      form = { source_branch: plan.branch, target_branch: 'main', title: plan.title, description: plan.body, remove_source_branch: true }
+      Gitlab.api("projects/#{@project}/merge_requests", method: 'POST', form: form, allow_failure: true) ||
+        puts('regen: mr create reported failure, checking whether the MR exists')
     end
 
     def arm(plan)
