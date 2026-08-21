@@ -63,15 +63,20 @@ module Automation
       Dir.glob(File.join(workspace, '**', IFACE_PATH)).map { |f| f.delete_prefix("#{workspace}/").delete_suffix("/#{IFACE_PATH}") }
     end
 
-    def self.get(url)
+    def self.get(url, job_token: true)
       req = Net::HTTP::Get.new(URI(url))
-      token = ENV['CONTROL_GITLAB_TOKEN']
-      req['PRIVATE-TOKEN'] = token if token && !token.empty?
+      control = ENV['CONTROL_GITLAB_TOKEN'].to_s
+      job = ENV['CI_JOB_TOKEN'].to_s
+      if !control.empty?
+        req['PRIVATE-TOKEN'] = control
+      elsif job_token && !job.empty?
+        req['JOB-TOKEN'] = job
+      end
       Net::HTTP.start(req.uri.host, req.uri.port, use_ssl: true) { |http| http.request(req) }
     end
 
     def self.declared_remote(group)
-      res = get("#{API}/groups/#{group}/projects?include_subgroups=true&per_page=100")
+      res = get("#{API}/groups/#{group}/projects?include_subgroups=true&per_page=100", job_token: false)
       raise "group listing failed: #{res.code}" unless res.is_a?(Net::HTTPSuccess)
 
       JSON.parse(res.body).map { |p| p['path_with_namespace'].delete_prefix("#{group}/") }
@@ -111,12 +116,11 @@ module Automation
     end
 
     def self.diff(current, generated)
-      require 'tempfile'
-      Tempfile.create('generated') do |f|
-        f.write(generated)
-        f.flush
-        Open3.capture2('diff', '-u', '--label', 'deps/deps-graph.yml', '--label', 'generated', '-', f.path, stdin_data: current).first
-      end
+      old_lines = current.lines(chomp: true)
+      new_lines = generated.lines(chomp: true)
+      removed = (old_lines - new_lines).map { |l| "- #{l}" }
+      added = (new_lines - old_lines).map { |l| "+ #{l}" }
+      ["--- deps/deps-graph.yml", "+++ generated", *removed, *added].join("\n")
     end
   end
 end

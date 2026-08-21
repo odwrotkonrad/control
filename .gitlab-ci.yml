@@ -59,8 +59,6 @@ validate-deps-graph:
     - if: $CI_PIPELINE_SOURCE == "pipeline"
       when: never
     - when: on_success
-  variables:
-    CONTROL_GITLAB_TOKEN: $REPO_VAR_CONTROL_GITLAB_TOKEN
   script:
     - make aggregate-check
 
