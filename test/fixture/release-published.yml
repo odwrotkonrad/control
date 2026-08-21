@@ -10,4 +10,4 @@ regen:cross-repo/infra/iac:
   variables:
     CONTROL_GITLAB_TOKEN: $REPO_VAR_CONTROL_GITLAB_TOKEN
   script:
-    - scripts/regen/regen.zsh --repo cross-repo/infra/iac --tag v0.0.45 --producer prose-assets
+    - bin/automation regen --repo cross-repo/infra/iac --tag v0.0.45 --producer prose-assets

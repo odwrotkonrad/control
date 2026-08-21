@@ -20,7 +20,7 @@ module Automation
     end
 
     def self.regen(job)
-      script = "scripts/regen/regen.zsh --repo #{job.repo} --tag #{job.tag} --producer #{job.producer}"
+      script = "bin/automation regen --repo #{job.repo} --tag #{job.tag} --producer #{job.producer}"
       script += " --prev #{job.prev}" if job.prev
       <<~YAML
         regen:#{job.repo}:

@@ -27,11 +27,11 @@ repo-render-env:
 ##[>] Graph [genai-include]
 #[what] aggregate per-repo cross-repo-interface declarations over the seeds into deps/deps-graph.yml
 aggregate:
-	@scripts/aggregate/aggregate.zsh
+	@bin/automation aggregate
 
 #[what] fail if deps/deps-graph.yml drifted from the aggregated interfaces
 aggregate-check:
-	@scripts/aggregate/aggregate.zsh --check
+	@bin/automation aggregate --check
 ##[<] Graph
 
 ##[>] Events [genai-include]

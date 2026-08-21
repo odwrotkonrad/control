@@ -1,10 +1,15 @@
 ##[>] 🤖🤖
+require_relative 'automation/shell'
 require_relative 'automation/event'
 require_relative 'automation/producers'
 require_relative 'automation/graph'
 require_relative 'automation/regen_pipeline'
 require_relative 'automation/handlers/release_published'
 require_relative 'automation/handlers/ci_var_changed'
+require_relative 'automation/aggregate'
+require_relative 'automation/regen'
+require_relative 'automation/regen_runner'
+require_relative 'automation/sweep'
 
 # Automation turns one CI event into the child pipeline that regenerates the affected repos.
 module Automation

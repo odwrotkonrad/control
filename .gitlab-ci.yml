@@ -82,7 +82,7 @@ dispatch-event:
   rules:
     - if: $CI_PIPELINE_SOURCE == "pipeline"
   script:
-    - scripts/aggregate/aggregate.zsh --out deps/deps-graph.yml
+    - make aggregate
     - make dispatch
   artifacts:
     paths:
