@@ -63,6 +63,9 @@ edges:
     - ai-sandbox/sandbox
     - cross-repo/infra/iac
     - cross-repo/infra/oci-images
+    - cross-repo/misc
+    - cross-repo/prose/assets
+    - cross-repo/prose/spec
     - go-modules
     - notes
   configs/zsh/base-linux:
@@ -121,9 +124,11 @@ edges:
     - che-packages
     - go-modules
   cross-repo/misc/ci-scripts:
+    - che-packages
     - configs
     - cross-repo/automation
     - cross-repo/infra/iac/ci-var/misc-ref
+    - cross-repo/infra/oci-images
     - cross-repo/prose/assets
     - cross-repo/prose/spec
     - notes
@@ -168,7 +173,6 @@ edges:
     - cross-repo/infra/iac/ci-var/prose-assets-ref
   cross-repo/prose/spec/conventions-doc:
     - ai-sandbox
-    - che-packages
     - configs
     - cross-repo/automation
     - cross-repo/infra/iac
