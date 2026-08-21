@@ -22,9 +22,20 @@ module Automation
 
   # Gitlab calls the GitLab API through glab, the CI job's authenticated client.
   module Gitlab
+    GET_ATTEMPTS = 5
+    RETRY_DELAY = 3
+
     def self.api(path, method: 'GET', form: {}, allow_failure: false)
       cmd = ['glab', 'api', '-X', method, path] + form.flat_map { |k, v| ['-f', "#{k}=#{v}"] }
-      out = Shell.run(*cmd, allow_failure: allow_failure, quiet: allow_failure)
+      attempts = method == 'GET' ? GET_ATTEMPTS : 1
+      out = nil
+      attempts.times do |i|
+        last = i == attempts - 1
+        out = Shell.run(*cmd, allow_failure: allow_failure || !last, quiet: allow_failure || !last)
+        break unless out.nil?
+
+        sleep RETRY_DELAY unless last
+      end
       return nil if out.nil?
 
       out.empty? ? {} : JSON.parse(out)
