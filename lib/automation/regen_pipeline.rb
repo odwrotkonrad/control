@@ -25,7 +25,7 @@ module Automation
       script = "bin/automation regen --repo #{job.repo} --key #{job.key} --tag #{job.tag}"
       script += " --prev #{job.prev}" if job.prev
       <<~YAML
-        regen:#{job.repo}:
+        regen:#{job.repo}:#{job.key}:
           stage: regen
           image: #{IMAGE}
           tags:

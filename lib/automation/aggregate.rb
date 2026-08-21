@@ -63,8 +63,20 @@ module Automation
       Dir.glob(File.join(workspace, '**', IFACE_PATH)).map { |f| f.delete_prefix("#{workspace}/").delete_suffix("/#{IFACE_PATH}") }
     end
 
+    def self.get(url, job_token: true)
+      req = Net::HTTP::Get.new(URI(url))
+      control = ENV['CONTROL_GITLAB_TOKEN'].to_s
+      job = ENV['CI_JOB_TOKEN'].to_s
+      if !control.empty?
+        req['PRIVATE-TOKEN'] = control
+      elsif job_token && !job.empty?
+        req['JOB-TOKEN'] = job
+      end
+      Net::HTTP.start(req.uri.host, req.uri.port, use_ssl: true) { |http| http.request(req) }
+    end
+
     def self.declared_remote(group)
-      res = Net::HTTP.get_response(URI("#{API}/groups/#{group}/projects?include_subgroups=true&per_page=100"))
+      res = get("#{API}/groups/#{group}/projects?include_subgroups=true&per_page=100", job_token: false)
       raise "group listing failed: #{res.code}" unless res.is_a?(Net::HTTPSuccess)
 
       JSON.parse(res.body).map { |p| p['path_with_namespace'].delete_prefix("#{group}/") }
@@ -72,7 +84,7 @@ module Automation
 
     def self.fetch_remote(group, repo)
       project = CGI.escape("#{group}/#{repo}")
-      res = Net::HTTP.get_response(URI("#{API}/projects/#{project}/repository/files/#{CGI.escape(IFACE_PATH)}/raw?ref=main"))
+      res = get("#{API}/projects/#{project}/repository/files/#{CGI.escape(IFACE_PATH)}/raw?ref=main")
       res.is_a?(Net::HTTPSuccess) ? res.body.force_encoding("UTF-8") : nil
     end
 
@@ -104,12 +116,15 @@ module Automation
     end
 
     def self.diff(current, generated)
-      require 'tempfile'
-      Tempfile.create('generated') do |f|
-        f.write(generated)
-        f.flush
-        Open3.capture2('diff', '-u', '--label', 'deps/deps-graph.yml', '--label', 'generated', '-', f.path, stdin_data: current).first
-      end
+      old_lines = current.lines(chomp: true)
+      new_lines = generated.lines(chomp: true)
+      first = (0...[old_lines.size, new_lines.size].max).find { |i| old_lines[i] != new_lines[i] }
+      last_old = old_lines.size - 1
+      last_new = new_lines.size - 1
+      last_old -= 1 and last_new -= 1 while last_old > first && last_new > first && old_lines[last_old] == new_lines[last_new]
+      ["--- deps/deps-graph.yml", "+++ generated", "@@ line #{first + 1} @@",
+       *old_lines[first..last_old].map { |l| "- #{l}" },
+       *new_lines[first..last_new].map { |l| "+ #{l}" }].join("\n")
     end
   end
 end

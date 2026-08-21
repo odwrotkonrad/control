@@ -1,5 +1,6 @@
 ##[>] 🤖🤖
 upstream:
+  - configs/llm/claude
   - cross-repo/infra/oci-images/ci-linux
   - cross-repo/prose/assets/repo-prose
   - cross-repo/prose/assets/doc-templates
