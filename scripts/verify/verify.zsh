@@ -81,7 +81,11 @@ work=(${(f)"$(affected $artifact)"})
 #   content regen waits for the variable to carry the tag before it renders
 pin_repo=cross-repo/infra/iac
 has_pin=0
-(( ${work[(Ie)$pin_repo]} )) && has_pin=1
+case $producer in
+  prose-assets|prose-spec|misc|che-packages|oci-images)
+    (( ${work[(Ie)$pin_repo]} )) || work=($pin_repo $work)
+    has_pin=1 ;;
+esac
 
 if (( ${#o_emit} )) {
   {
