@@ -3,7 +3,7 @@
 SHELL := zsh
 
 WRAPPERS := repo-prepare-dev-env
-COMMANDS := semver-next tag-mint render-templates repo-render-env aggregate aggregate-check repo-ci-prepare-hooks repo-ci-precommit-all
+COMMANDS := semver-next tag-mint render-templates repo-render-env aggregate aggregate-check dispatch test repo-ci-prepare-hooks repo-ci-precommit-all
 
 .PHONY: $(WRAPPERS) $(COMMANDS)
 
@@ -33,6 +33,16 @@ aggregate:
 aggregate-check:
 	@scripts/aggregate/aggregate.zsh --check
 ##[<] Graph
+
+##[>] Events [genai-include]
+#[what] turn AUTOMATION_EVENT (or EVENT_FILE=<json>) into the regen child pipeline at EMIT (default regen-pipeline.yml)
+dispatch:
+	@bin/automation dispatch $(if $(EVENT_FILE),--event-file $(EVENT_FILE)) --emit $(or $(EMIT),regen-pipeline.yml)
+
+#[what] run the dispatcher's minitest suite
+test:
+	@ruby -Ilib -e 'Dir.glob("test/**/*_test.rb").sort.each { |f| require File.expand_path(f) }'
+##[<] Events
 
 ##[>] Release [genai-include]
 #[what] print the next semver tag inferred from the last tag..HEAD diff (override: `semver: major|minor|patch` commit token)

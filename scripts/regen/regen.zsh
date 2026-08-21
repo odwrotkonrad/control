@@ -38,11 +38,11 @@ if [[ -z $workdir ]] {
 pin_glob='*.tfvars'
 pin_key="" pin_var="" pin_written=$tag
 case $producer in
-  prose-assets) pin_key=prose_assets_ref; pin_var=PROSE_ASSETS_REF ;;
-  prose-spec)   pin_key=prose_spec_ref;   pin_var=PROSE_SPEC_REF ;;
-  misc)         pin_key=misc_ref;         pin_var=MISC_REF ;;
-  che-packages) pin_key=che_packages_ref; pin_written=${tag#v} ;;
-  oci-images)   pin_key=ci_images_ref ;;
+  prose-assets) pin_key=PROSE_ASSETS_REF; pin_var=PROSE_ASSETS_REF ;;
+  prose-spec)   pin_key=PROSE_SPEC_REF;   pin_var=PROSE_SPEC_REF ;;
+  misc)         pin_key=MISC_REF;         pin_var=MISC_REF ;;
+  che-packages) pin_key=CHE_PACKAGES_REF; pin_written=${tag#v} ;;
+  oci-images)   pin_key=CI_IMAGES_REF ;;
   *)
     print -ru2 -- "regen: unknown producer '$producer' (prose-assets|prose-spec|misc|che-packages|oci-images)"
     exit 2 ;;

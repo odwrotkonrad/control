@@ -7,7 +7,7 @@ workflow:
 
 stages:
   - validate
-  - verify
+  - dispatch
   - regen
   - release
 
@@ -62,16 +62,28 @@ validate-deps-graph:
   script:
     - make aggregate-check
 
-verify-prose-release:
+test-ruby:
   tags:
     - gke-linux-amd64-small
-  stage: verify
+  stage: validate
+  image: $CI_IMAGE
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "pipeline"
+      when: never
+    - when: on_success
+  script:
+    - make test
+
+dispatch-event:
+  tags:
+    - gke-linux-amd64-small
+  stage: dispatch
   image: $CI_IMAGE
   rules:
     - if: $CI_PIPELINE_SOURCE == "pipeline"
   script:
     - scripts/aggregate/aggregate.zsh --out deps/deps-graph.yml
-    - scripts/verify/verify.zsh --emit-pipeline regen-pipeline.yml
+    - make dispatch
   artifacts:
     paths:
       - regen-pipeline.yml
@@ -81,11 +93,11 @@ regen-fan-out:
   rules:
     - if: $CI_PIPELINE_SOURCE == "pipeline"
   needs:
-    - verify-prose-release
+    - dispatch-event
   trigger:
     include:
       - artifact: regen-pipeline.yml
-        job: verify-prose-release
+        job: dispatch-event
     strategy: depend
 
 #[why] a merge to the default branch is the release event: mint the next semver tag so consumers can

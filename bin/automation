@@ -1,0 +1,49 @@
+#!/usr/bin/env ruby
+##[>] 🤖🤖
+require 'optparse'
+require_relative '../lib/automation'
+
+root = File.expand_path('..', __dir__)
+options = { graph: File.join(root, 'deps/deps-graph.yml'), event_file: nil, emit: nil }
+
+usage = <<~USAGE
+  usage: automation dispatch [--event-file <json>] [--emit <yaml>] [--graph <yml>]
+         automation graph affected|produces|consumes <vertex> [--graph <yml>]
+USAGE
+
+parser = OptionParser.new do |o|
+  o.banner = usage
+  o.on('--graph PATH') { |v| options[:graph] = v }
+  o.on('--event-file PATH') { |v| options[:event_file] = v }
+  o.on('--emit PATH') { |v| options[:emit] = v }
+end
+args = parser.parse(ARGV)
+
+graph = Automation::Graph.load(options[:graph])
+
+case args.shift
+when 'dispatch'
+  json = options[:event_file] ? File.read(options[:event_file]) : ENV.fetch('AUTOMATION_EVENT') { abort 'AUTOMATION_EVENT is unset and no --event-file given' }
+  event = Automation::Event.parse(json)
+  yaml = Automation.dispatch(event, graph: graph)
+  if options[:emit]
+    File.write(options[:emit], yaml)
+    jobs = yaml.scan(/^regen:(\S+):$/).flatten
+    puts "#{event.type} #{event.summary}: wrote #{options[:emit]} (#{jobs.size} downstream(s): #{jobs.empty? ? 'none' : jobs.join(' ')})"
+  else
+    print yaml
+  end
+when 'graph'
+  query, vertex = args
+  abort usage unless vertex
+  result = case query
+           when 'affected' then graph.affected(vertex)
+           when 'produces' then graph.produces(vertex)
+           when 'consumes' then graph.consumes(vertex)
+           else abort usage
+           end
+  puts result
+else
+  abort usage
+end
+##[<] 🤖🤖
