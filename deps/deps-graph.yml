@@ -50,8 +50,7 @@ repositories:
       - {name: get-term-open-files-with, type: binary}
       - {name: lib, type: go-module}
   - repo: notes
-    artifacts:
-      - {name: purpose-doc, type: ai-prose}
+    artifacts: []
   - repo: resume-md-pdf
     artifacts:
       - {name: styled-resume-pdf, type: pdf}
@@ -81,6 +80,7 @@ edges:
     - cross-repo/prose/assets
     - cross-repo/prose/spec
     - go-modules
+    - notes
     - resume-md-pdf
   cross-repo/infra/iac/ci-var/che-backup-auto-create:
     - configs
@@ -96,6 +96,7 @@ edges:
     - cross-repo/prose/assets
     - cross-repo/prose/spec
     - go-modules
+    - notes
     - resume-md-pdf
   cross-repo/infra/iac/ci-var/enable-darwin-ci:
     - configs
@@ -125,6 +126,7 @@ edges:
     - cross-repo/infra/iac/ci-var/misc-ref
     - cross-repo/prose/assets
     - cross-repo/prose/spec
+    - notes
     - resume-md-pdf
   cross-repo/prose/assets/doc-templates:
     - ai-sandbox
@@ -136,6 +138,7 @@ edges:
     - cross-repo/misc
     - cross-repo/prose/spec
     - go-modules
+    - notes
     - resume-md-pdf
   cross-repo/prose/assets/license:
     - ai-sandbox
@@ -147,6 +150,7 @@ edges:
     - cross-repo/misc
     - cross-repo/prose/spec
     - go-modules
+    - notes
     - resume-md-pdf
   cross-repo/prose/assets/repo-prose:
     - ai-sandbox
@@ -158,6 +162,7 @@ edges:
     - cross-repo/misc
     - cross-repo/prose/spec
     - go-modules
+    - notes
     - resume-md-pdf
   cross-repo/prose/assets/shared-prose:
     - cross-repo/infra/iac/ci-var/prose-assets-ref
@@ -172,6 +177,7 @@ edges:
     - cross-repo/misc
     - cross-repo/prose/assets
     - go-modules
+    - notes
     - resume-md-pdf
   cross-repo/prose/spec/repo-spec:
     - cross-repo/infra/iac/ci-var/prose-spec-ref

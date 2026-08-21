@@ -63,8 +63,15 @@ module Automation
       Dir.glob(File.join(workspace, '**', IFACE_PATH)).map { |f| f.delete_prefix("#{workspace}/").delete_suffix("/#{IFACE_PATH}") }
     end
 
+    def self.get(url)
+      req = Net::HTTP::Get.new(URI(url))
+      token = ENV['CONTROL_GITLAB_TOKEN']
+      req['PRIVATE-TOKEN'] = token if token && !token.empty?
+      Net::HTTP.start(req.uri.host, req.uri.port, use_ssl: true) { |http| http.request(req) }
+    end
+
     def self.declared_remote(group)
-      res = Net::HTTP.get_response(URI("#{API}/groups/#{group}/projects?include_subgroups=true&per_page=100"))
+      res = get("#{API}/groups/#{group}/projects?include_subgroups=true&per_page=100")
       raise "group listing failed: #{res.code}" unless res.is_a?(Net::HTTPSuccess)
 
       JSON.parse(res.body).map { |p| p['path_with_namespace'].delete_prefix("#{group}/") }
@@ -72,7 +79,7 @@ module Automation
 
     def self.fetch_remote(group, repo)
       project = CGI.escape("#{group}/#{repo}")
-      res = Net::HTTP.get_response(URI("#{API}/projects/#{project}/repository/files/#{CGI.escape(IFACE_PATH)}/raw?ref=main"))
+      res = get("#{API}/projects/#{project}/repository/files/#{CGI.escape(IFACE_PATH)}/raw?ref=main")
       res.is_a?(Net::HTTPSuccess) ? res.body.force_encoding("UTF-8") : nil
     end
 
