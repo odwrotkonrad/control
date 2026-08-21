@@ -1,5 +1,8 @@
 ##[>] 🤖
 repositories:
+  - repo: ai-sandbox
+    artifacts:
+      - {name: sandbox, type: oci-image}
   - repo: che-packages
     artifacts:
       - {name: catalog, type: dataset}
@@ -7,17 +10,11 @@ repositories:
     artifacts:
       - {name: zsh/base-linux, type: che-profile}
       - {name: llm/claude, type: ai-prose}
-  - repo: control
+  - repo: cross-repo/automation
     artifacts:
       - {name: deps-graph, type: dataset}
       - {name: workspace, type: che-profile}
-  - repo: go-modules
-    artifacts:
-      - {name: che, type: binary}
-      - {name: get-os-open-files-with, type: binary}
-      - {name: get-term-open-files-with, type: binary}
-      - {name: lib, type: go-module}
-  - repo: infra/iac
+  - repo: cross-repo/infra/iac
     artifacts:
       - {name: tf-lock, type: lockfile}
       - {name: ci-var/artifact-registry, type: ci-variable}
@@ -25,130 +22,163 @@ repositories:
       - {name: ci-var/che-packages-ref, type: ci-variable}
       - {name: ci-var/che-backup-auto-create, type: ci-variable}
       - {name: ci-var/enable-darwin-ci, type: ci-variable}
-  - repo: infra/oci-images
+  - repo: cross-repo/infra/oci-images
     artifacts:
       - {name: ci-linux, type: oci-image}
       - {name: ci-linux-dind, type: oci-image}
       - {name: dev-sandbox, type: oci-image}
-  - repo: infra/sandbox
+  - repo: cross-repo/misc
     artifacts:
-      - {name: sandbox, type: oci-image}
-  - repo: notes
+      - {name: ci-scripts, type: script}
+  - repo: cross-repo/prose/assets
     artifacts:
-      - {name: purpose-doc, type: ai-prose}
-  - repo: prose
-    artifacts:
-      - {name: conventions-doc, type: ai-prose}
       - {name: repo-prose, type: ai-prose}
       - {name: shared-prose, type: ai-prose}
       - {name: doc-templates, type: ai-prose}
       - {name: license, type: ai-prose}
+  - repo: cross-repo/prose/spec
+    artifacts:
+      - {name: conventions-doc, type: ai-prose}
+      - {name: repo-spec, type: ai-prose}
+  - repo: go-modules
+    artifacts:
+      - {name: che, type: binary}
+      - {name: get-os-open-files-with, type: binary}
+      - {name: get-term-open-files-with, type: binary}
+      - {name: lib, type: go-module}
+  - repo: notes
+    artifacts: []
   - repo: resume-md-pdf
     artifacts:
       - {name: styled-resume-pdf, type: pdf}
 edges:
   che-packages/catalog:
+    - cross-repo/infra/iac
     - go-modules
-    - infra/iac
   configs/llm/claude:
+    - ai-sandbox
+    - ai-sandbox/sandbox
+    - cross-repo/infra/iac
+    - cross-repo/infra/oci-images
     - go-modules
-    - infra/iac
-    - infra/oci-images
-    - infra/sandbox
-    - infra/sandbox/sandbox
     - notes
   configs/zsh/base-linux:
-    - infra/oci-images/dev-sandbox
-    - infra/sandbox/sandbox
-  control/workspace:
+    - ai-sandbox/sandbox
+    - cross-repo/infra/oci-images/dev-sandbox
+  cross-repo/automation/workspace:
     - configs
-  go-modules/che:
+  cross-repo/infra/iac/ci-var/artifact-registry:
+    - ai-sandbox
     - che-packages
     - configs
-    - infra/oci-images/ci-linux
-    - infra/oci-images/dev-sandbox
-    - infra/sandbox/sandbox
+    - cross-repo/automation
+    - cross-repo/infra/oci-images
+    - cross-repo/misc
+    - cross-repo/prose/assets
+    - cross-repo/prose/spec
+    - go-modules
+    - notes
+    - resume-md-pdf
+  cross-repo/infra/iac/ci-var/che-backup-auto-create:
+    - configs
+  cross-repo/infra/iac/ci-var/che-packages-ref:
+    - configs
+    - go-modules
+  cross-repo/infra/iac/ci-var/ci-images-ref:
+    - ai-sandbox
+    - che-packages
+    - configs
+    - cross-repo/automation
+    - cross-repo/misc
+    - cross-repo/prose/assets
+    - cross-repo/prose/spec
+    - go-modules
+    - notes
+    - resume-md-pdf
+  cross-repo/infra/iac/ci-var/enable-darwin-ci:
+    - configs
+    - go-modules
+  cross-repo/infra/iac/tf-lock:
+    - cross-repo/infra/oci-images
+  cross-repo/infra/oci-images/ci-linux:
+    - ai-sandbox
+    - che-packages
+    - configs
+    - cross-repo/automation
+    - cross-repo/infra/iac
+    - cross-repo/infra/oci-images
+    - cross-repo/misc
+    - cross-repo/prose/assets
+    - cross-repo/prose/spec
+    - go-modules
+    - notes
+    - resume-md-pdf
+  cross-repo/infra/oci-images/ci-linux-dind:
+    - che-packages
+    - go-modules
+  cross-repo/misc/ci-scripts:
+    - configs
+    - cross-repo/automation
+    - cross-repo/prose/assets
+    - cross-repo/prose/spec
+    - notes
+    - resume-md-pdf
+  cross-repo/prose/assets/doc-templates:
+    - ai-sandbox
+    - che-packages
+    - configs
+    - cross-repo/automation
+    - cross-repo/infra/iac
+    - cross-repo/infra/oci-images
+    - cross-repo/misc
+    - cross-repo/prose/spec
+    - go-modules
+    - notes
+    - resume-md-pdf
+  cross-repo/prose/assets/license:
+    - ai-sandbox
+    - che-packages
+    - configs
+    - cross-repo/automation
+    - cross-repo/infra/iac
+    - cross-repo/infra/oci-images
+    - cross-repo/misc
+    - cross-repo/prose/spec
+    - go-modules
+    - notes
+    - resume-md-pdf
+  cross-repo/prose/assets/repo-prose:
+    - ai-sandbox
+    - che-packages
+    - configs
+    - cross-repo/automation
+    - cross-repo/infra/iac
+    - cross-repo/infra/oci-images
+    - cross-repo/misc
+    - cross-repo/prose/spec
+    - go-modules
+    - notes
+    - resume-md-pdf
+  cross-repo/prose/spec/conventions-doc:
+    - ai-sandbox
+    - che-packages
+    - configs
+    - cross-repo/automation
+    - cross-repo/infra/iac
+    - cross-repo/infra/oci-images
+    - cross-repo/misc
+    - cross-repo/prose/assets
+    - go-modules
+    - notes
+    - resume-md-pdf
+  go-modules/che:
+    - ai-sandbox/sandbox
+    - che-packages
+    - configs
+    - cross-repo/infra/oci-images/ci-linux
+    - cross-repo/infra/oci-images/dev-sandbox
   go-modules/lib:
     - go-modules/che
     - go-modules/get-os-open-files-with
     - go-modules/get-term-open-files-with
-  infra/iac/ci-var/artifact-registry:
-    - che-packages
-    - configs
-    - control
-    - go-modules
-    - infra/oci-images
-    - infra/sandbox
-    - prose
-    - resume-md-pdf
-  infra/iac/ci-var/che-backup-auto-create:
-    - configs
-  infra/iac/ci-var/che-packages-ref:
-    - configs
-    - go-modules
-  infra/iac/ci-var/ci-images-ref:
-    - che-packages
-    - configs
-    - control
-    - go-modules
-    - infra/sandbox
-    - prose
-    - resume-md-pdf
-  infra/iac/ci-var/enable-darwin-ci:
-    - configs
-    - go-modules
-  infra/iac/tf-lock:
-    - infra/oci-images
-  infra/oci-images/ci-linux:
-    - che-packages
-    - configs
-    - control
-    - go-modules
-    - infra/iac
-    - infra/oci-images
-    - infra/sandbox
-    - notes
-    - prose
-    - resume-md-pdf
-  infra/oci-images/ci-linux-dind:
-    - che-packages
-    - go-modules
-  prose/conventions-doc:
-    - che-packages
-    - configs
-    - control
-    - go-modules
-    - infra/iac
-    - infra/oci-images
-    - infra/sandbox
-    - resume-md-pdf
-  prose/doc-templates:
-    - che-packages
-    - configs
-    - control
-    - go-modules
-    - infra/iac
-    - infra/oci-images
-    - infra/sandbox
-    - resume-md-pdf
-  prose/license:
-    - che-packages
-    - configs
-    - control
-    - go-modules
-    - infra/iac
-    - infra/oci-images
-    - infra/sandbox
-    - resume-md-pdf
-  prose/repo-prose:
-    - che-packages
-    - configs
-    - control
-    - go-modules
-    - infra/iac
-    - infra/oci-images
-    - infra/sandbox
-    - resume-md-pdf
-  prose/shared-prose:
-    - control
 ##[<] 🤖
