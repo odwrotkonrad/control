@@ -4,7 +4,7 @@ set -euo pipefail
 
 group=konradodwrot
 
-repo="" tag="" prev="" workdir="" producer=prose dry=0
+repo="" tag="" prev="" workdir="" producer="" dry=0
 zparseopts -D -E -- -repo:=o_repo -tag:=o_tag -prev:=o_prev -workdir:=o_wd -producer:=o_prod -dry-run=o_dry
 (( ${#o_repo} )) && repo=${o_repo[2]}
 (( ${#o_tag} )) && tag=${o_tag[2]}
@@ -13,7 +13,7 @@ zparseopts -D -E -- -repo:=o_repo -tag:=o_tag -prev:=o_prev -workdir:=o_wd -prod
 (( ${#o_prod} )) && producer=${o_prod[2]}
 (( ${#o_dry} )) && dry=1
 
-[[ -n $repo && -n $tag ]] || { print "usage: regen.zsh --repo <repo> --tag <vX.Y.Z> [--prev <tag>] [--workdir <dir>] [--producer <name>] [--dry-run]" >&2; exit 2 }
+[[ -n $repo && -n $tag && -n $producer ]] || { print "usage: regen.zsh --repo <repo> --tag <vX.Y.Z> --producer <name> [--prev <tag>] [--workdir <dir>] [--dry-run]" >&2; exit 2 }
 
 #[why] every slash encoded, not just the group separator: a subgroup repo like infra/iac made
 #   "$group%2F$repo" into konradodwrot%2Finfra/iac, whose inner slash GitLab reads as a path
@@ -35,28 +35,20 @@ if [[ -z $workdir ]] {
 #[why] found by content, not from a fixed file list: configs pins prose in .repo/che.yml and again
 #   in profiles/llm/claude/che.yml, and a list naming only the first two left the third at v0.0.4
 #   while the repo moved to v0.0.22. A pin the fan-out does not look at is a pin that rots
+pin_glob='*.tfvars'
+pin_key="" pin_var="" pin_written=$tag
 case $producer in
-  #[why] one tfvars line in infra/iac, published as the GRP_KO_VAR_PROSE_REF group variable: every
-  #   consumer reads PROSE_REF from its environment, so a consumer carries no pin to move. a consumer
-  #   regen is content-only: render at the new tag, commit what changed
-  prose)
-    pin_glob='*.tfvars'
-    pin_pattern='prose_ref *= *"(v[0-9]+\.[0-9]+\.[0-9]+)"'
-    export PROSE_REF=$tag ;;
-  #[why] a tfvars line, not the old che/packages-pin.env: that pin lived inside the che module, so
-  #   raising it matched release-che's `changes: [che/**/*]` rule and cut a che release for a
-  #   catalog-only change. the version now reaches every repo as the CHE_PACKAGES_REF group CI
-  #   variable, and infra/iac's tfvars is the one file that declares its value
-  che-packages)
-    pin_glob='*.tfvars'
-    pin_pattern='che_packages_ref *= *"v?([0-9]+\.[0-9]+\.[0-9]+)"' ;;
-  oci-images)
-    pin_glob='*.tfvars'
-    pin_pattern='ci_images_ref *= *"(latest|v?[0-9]+\.[0-9]+\.[0-9]+)"' ;;
+  prose-assets) pin_key=prose_assets_ref; pin_var=PROSE_ASSETS_REF ;;
+  prose-spec)   pin_key=prose_spec_ref;   pin_var=PROSE_SPEC_REF ;;
+  misc)         pin_key=misc_ref;         pin_var=MISC_REF ;;
+  che-packages) pin_key=che_packages_ref; pin_written=${tag#v} ;;
+  oci-images)   pin_key=ci_images_ref ;;
   *)
-    print -ru2 -- "regen: unknown producer $producer"
+    print -ru2 -- "regen: unknown producer '$producer' (prose-assets|prose-spec|misc|che-packages|oci-images)"
     exit 2 ;;
 esac
+pin_pattern="$pin_key *= *\"(latest|v?[0-9]+\.[0-9]+\.[0-9]+)\""
+[[ -n $pin_var ]] && export $pin_var=$tag
 
 #[why] the checkout's tracked files only: a build artefact or a vendored copy carrying the same
 #   string is not this repo's pin to move
@@ -68,7 +60,7 @@ for f in ${(f)"$(cd $workdir && git ls-files -- $pin_glob '**/'$pin_glob 2>/dev/
 
 content_only=0
 if (( ! ${#spec_files} )) {
-  if [[ $producer == prose ]] {
+  if [[ -n $pin_var ]] {
     content_only=1
   } else {
     print "$repo: no $producer pin file, nothing to regen"
@@ -180,16 +172,7 @@ if [[ -n $stale ]] {
 
 cd $workdir
 for f in ${spec_files#$workdir/}; {
-  #[why] the pin is written back in the producer's own format: prose carries the leading v in the
-  #   ref, che-packages a bare version in a quoted tfvars string
-  case $producer in
-    prose)
-      sed -i.pinbak -E "s|(prose_ref[[:space:]]*=[[:space:]]*\")v?[0-9]+\.[0-9]+\.[0-9]+\"|\1$tag\"|g" $f ;;
-    che-packages)
-      sed -i.pinbak -E "s|(che_packages_ref[[:space:]]*=[[:space:]]*\")v?[0-9]+\.[0-9]+\.[0-9]+\"|\1${tag#v}\"|g" $f ;;
-    oci-images)
-      sed -i.pinbak -E "s|(ci_images_ref[[:space:]]*=[[:space:]]*\")(latest\|v?[0-9]+\.[0-9]+\.[0-9]+)\"|\1$tag\"|g" $f ;;
-  esac
+  sed -i.pinbak -E "s|(${pin_key}[[:space:]]*=[[:space:]]*\")(latest\|v?[0-9]+\.[0-9]+\.[0-9]+)\"|\1${pin_written}\"|g" $f
   command rm -f $f.pinbak
 }
 #[why] pick the target the repo actually defines, rather than running one and falling back on

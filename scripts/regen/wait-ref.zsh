@@ -11,9 +11,11 @@ zparseopts -D -E -- -producer:=o_prod -tag:=o_tag -timeout:=o_to
 [[ -n $producer && -n $tag ]] || { print "usage: wait-ref.zsh --producer <name> --tag <tag> [--timeout <seconds>]" >&2; exit 2 }
 
 case $producer in
-  prose) key=GRP_KO_VAR_PROSE_REF ;;
+  prose-assets) key=GRP_KO_VAR_PROSE_ASSETS_REF ;;
+  prose-spec)   key=GRP_KO_VAR_PROSE_SPEC_REF ;;
+  misc)         key=GRP_KO_VAR_MISC_REF ;;
   che-packages) key=GRP_KO_VAR_CHE_PACKAGES_REF ;;
-  oci-images) key=GRP_KO_VAR_CI_IMAGES_REF ;;
+  oci-images)   key=GRP_KO_VAR_CI_IMAGES_REF ;;
   *) print -ru2 -- "wait-ref: unknown producer $producer"; exit 2 ;;
 esac
 

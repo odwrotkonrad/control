@@ -4,14 +4,21 @@ set -euo pipefail
 
 repo_root=${0:a:h:h:h}
 group=konradodwrot
-#[why] consumers carry no pin: each che.yml reads PROSE_REF from its env, and infra/iac's tfvars is the
-#   one line that declares the current value. the watcher reads that authority, falls back to the
-#   newest tag when iac is not checked out, and keeps every repo's gitignored .env at it
-ref_pattern='env\.PROSE_REF'
-authority_pattern='^prose_ref *= *"(v[0-9]+\.[0-9]+\.[0-9]+)"'
 state_dir=${XDG_STATE_HOME:-$HOME/.local/state}/prose-watcher
 
-workspace=${repo_root:h} interval=300 once=0
+typeset -A pin_repo=(
+  PROSE_ASSETS_REF cross-repo/prose/assets
+  PROSE_SPEC_REF   cross-repo/prose/spec
+  MISC_REF         cross-repo/misc
+)
+typeset -A pin_key=(
+  PROSE_ASSETS_REF prose_assets_ref
+  PROSE_SPEC_REF   prose_spec_ref
+  MISC_REF         misc_ref
+)
+pin_vars=(PROSE_ASSETS_REF PROSE_SPEC_REF MISC_REF)
+
+workspace=${repo_root:h:h} interval=300 once=0
 zparseopts -D -E -- -workspace:=o_ws -interval:=o_int -once=o_once
 (( ${#o_ws} )) && workspace=${o_ws[2]}
 (( ${#o_int} )) && interval=${o_int[2]}
@@ -19,51 +26,60 @@ zparseopts -D -E -- -workspace:=o_ws -interval:=o_int -once=o_once
 
 mkdir -p $state_dir
 
+latest_tag() {
+  git ls-remote --tags https://gitlab.com/$group/$1.git 'v*' \
+    | awk -F/ '{print $NF}' | grep -v '\^{}' | sort -V | tail -1 || true
+}
+
+authority_pin() {
+  local key=$1 line
+  for line in ${(f)"$(cat $workspace/cross-repo/infra/iac/tf/terraform.tfvars 2>/dev/null)"}; {
+    [[ $line =~ "^$key *= *\"(v[0-9]+\.[0-9]+\.[0-9]+)\"" ]] || continue
+    print $match[1]
+    return 0
+  }
+  return 1
+}
+
 pass() {
-  local latest chefile repo pin stamp_file stamp
-  latest=$(git ls-remote --tags https://gitlab.com/$group/prose.git 'v*' \
-    | awk -F/ '{print $NF}' | grep -v '\^{}' | sort -V | tail -1 || true)
-  print "latest prose tag: ${latest:-none}"
-  pin=""
-  for line in ${(f)"$(cat $workspace/infra/iac/tf/terraform.tfvars 2>/dev/null)"}; {
-    [[ $line =~ $authority_pattern ]] || continue
-    pin=$match[1]
-    break
+  local var pin latest chefile repo stamp_file stamp
+  local -A pins
+  for var in $pin_vars; {
+    latest=$(latest_tag $pin_repo[$var])
+    if pin=$(authority_pin $pin_key[$var]); then
+      print "$var: $pin (iac tfvars, latest tag ${latest:-none})"
+    else
+      pin=$latest
+      print "$var: ${pin:-none} (no iac checkout, using the latest tag)"
+    fi
+    [[ -n $pin ]] && pins[$var]=$pin
   }
-  if [[ -z $pin ]] {
-    pin=$latest
-    print "prose ref: ${pin:-none} (no infra/iac checkout, using the latest tag)"
-  } else {
-    print "prose ref: $pin (infra/iac tfvars)"
-    if [[ -n $latest && $pin != $latest ]] print "prose ref $pin behind latest $latest (regen MR flow owns the bump)"
-  }
-  [[ -n $pin ]] || return 0
-  for chefile in $workspace/*/che.yml(N) $workspace/*/*/che.yml(N); {
+  (( ${#pins} )) || return 0
+  local fingerprint=${(j:,:)${(k)pins/(#m)*/$MATCH=$pins[$MATCH]}}
+  for chefile in $workspace/**/che.yml(N); {
+    [[ $chefile == */.user/* ]] && continue
     repo=${${chefile:h}#$workspace/}
-    if ! rg -q "$ref_pattern" $chefile ${chefile:h}/.repo/che.yml(N) 2>/dev/null; then
-      print "$repo: no prose ref, no-op"
+    if ! rg -q 'env\.(PROSE_ASSETS_REF|PROSE_SPEC_REF|MISC_REF)' $chefile ${chefile:h}/.repo/che.yml(N) 2>/dev/null; then
       continue
     fi
     stamp_file=$state_dir/${repo//\//__}
     stamp=$(cat $stamp_file 2>/dev/null || true)
-    if [[ $pin == $stamp ]] {
-      print "$repo: at $pin, outputs fresh"
+    if [[ $fingerprint == $stamp ]] {
+      print "$repo: outputs fresh"
       continue
     }
-    print "$repo: ref $pin (last rendered: ${stamp:-never}), refreshing .env and non-checked-out outputs"
-    upsert_env ${chefile:h}/.env PROSE_REF $pin
-    if ! { (cd ${chefile:h} && PROSE_REF=$pin che render-templates --profiles=ontoRepo) } {
+    print "$repo: pins moved (last rendered: ${stamp:-never}), refreshing .env and non-checked-out outputs"
+    for var in ${(k)pins}; upsert_env ${chefile:h}/.env $var $pins[$var]
+    if ! { (cd ${chefile:h} && env ${(k)pins/(#m)*/$MATCH=$pins[$MATCH]} che render-templates --profiles=ontoRepo) } {
       print "$repo: render failed, keeping stamp, skipping"
       continue
     }
     tracked=(${(f)"$(git -C ${chefile:h} diff --name-only)"})
     (( ${#tracked} )) && git -C ${chefile:h} checkout -- $tracked
-    print $pin > $stamp_file
+    print $fingerprint > $stamp_file
   }
 }
 
-#[why] .env is gitignored, so the watcher may rewrite it: che's mergeUpsert keeps an existing key,
-#   which is right for a user's own values and wrong for a version that must track the authority
 upsert_env() {
   local file=$1 key=$2 value=$3
   if [[ -f $file ]] && grep -q "^$key=" $file; then

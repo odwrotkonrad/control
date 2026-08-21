@@ -5,23 +5,16 @@
 SHELL := zsh
 .SHELLFLAGS := -c
 
-#[what] cloned repo paths (workspace-root-relative), mirroring the $GITLAB_GROUPS clone
-#   (konradodwrot:konradodwrot;restricted:restricted). A <name>-<target> passthrough uses
-#   the path's last segment as <name> (all basenames unique here).
-REPOS := \
-  konradodwrot/configs \
-  konradodwrot/go-modules \
-  konradodwrot/notes \
-  konradodwrot/resume-md-pdf \
-  konradodwrot/infra/oci-images \
-  restricted/infra \
-  restricted/sandbox
-
 #[what] workspace root: the dir holding konradodwrot/notes, found near $(CURDIR)
 #[why] the same file is linked above (~/projects), at (~/projects/gitlab), and below
 #   (~/projects/gitlab/konradodwrot) the workspace root; probe $(CURDIR), then its
 #   descendants down to the linked depths, then ancestors, first hit wins
 ROOT := $(shell c=$(CURDIR); for d in $$c $$c/gitlab $$c/gitlab/konradodwrot $${c:h} $${c:h:h}; do [[ -d $$d/konradodwrot/notes ]] && { print -r -- $$d; break }; done)
+
+#[what] cloned repo paths (workspace-root-relative), discovered from the tree on every run: a moved
+#   or new repo appears without a hand edit. A <name>-<target> passthrough uses the path's last
+#   segment as <name> (all basenames unique here).
+REPOS := $(shell cd $(ROOT) && print -l **/.git(N/:h) | sort)
 
 #[what] resolve a repo name (basename) to its absolute cloned dir under the workspace root
 repo_dir = $(ROOT)/$(filter %/$(1) $(1),$(REPOS))
