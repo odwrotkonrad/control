@@ -10,4 +10,5 @@ regen-pipeline.yml
 #[why] tagging scripts: authored in prose, rendered here by the ontoRepo profile
 /ci/semver-bump.zsh
 /ci/tag-mint.zsh
+/.env
 ##[<] 🤖
