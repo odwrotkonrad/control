@@ -38,7 +38,7 @@ def dispatch(args)
   return print(yaml) unless o[:emit]
 
   File.write(o[:emit], yaml)
-  jobs = yaml.scan(/^regen:(\S+):$/).flatten
+  jobs = yaml.scan(/^regen:(\S+):[A-Z0-9_]+:$/).flatten
   puts "#{event.type} #{event.summary}: wrote #{o[:emit]} (#{jobs.size} downstream(s): #{jobs.empty? ? 'none' : jobs.join(' ')})"
 end
 

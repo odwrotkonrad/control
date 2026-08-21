@@ -2,7 +2,7 @@ stages: [regen]
 variables:
   ARTIFACT_REGISTRY: $GRP_KO_VAR_ARTIFACT_REGISTRY
   CI_IMAGES_REF: $GRP_KO_VAR_CI_IMAGES_REF
-regen:ai-sandbox:
+regen:ai-sandbox:PROSE_ASSETS_REF:
   stage: regen
   image: $ARTIFACT_REGISTRY/ci-linux:$CI_IMAGES_REF
   tags:
@@ -11,7 +11,7 @@ regen:ai-sandbox:
     CONTROL_GITLAB_TOKEN: $REPO_VAR_CONTROL_GITLAB_TOKEN
   script:
     - "bin/automation regen --repo ai-sandbox --key PROSE_ASSETS_REF --tag v0.0.45 --prev v0.0.44"
-regen:configs:
+regen:configs:PROSE_ASSETS_REF:
   stage: regen
   image: $ARTIFACT_REGISTRY/ci-linux:$CI_IMAGES_REF
   tags:
@@ -20,7 +20,7 @@ regen:configs:
     CONTROL_GITLAB_TOKEN: $REPO_VAR_CONTROL_GITLAB_TOKEN
   script:
     - "bin/automation regen --repo configs --key PROSE_ASSETS_REF --tag v0.0.45 --prev v0.0.44"
-regen:cross-repo/automation:
+regen:cross-repo/automation:PROSE_ASSETS_REF:
   stage: regen
   image: $ARTIFACT_REGISTRY/ci-linux:$CI_IMAGES_REF
   tags:
