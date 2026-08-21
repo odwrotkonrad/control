@@ -118,9 +118,13 @@ module Automation
     def self.diff(current, generated)
       old_lines = current.lines(chomp: true)
       new_lines = generated.lines(chomp: true)
-      removed = (old_lines - new_lines).map { |l| "- #{l}" }
-      added = (new_lines - old_lines).map { |l| "+ #{l}" }
-      ["--- deps/deps-graph.yml", "+++ generated", *removed, *added].join("\n")
+      first = (0...[old_lines.size, new_lines.size].max).find { |i| old_lines[i] != new_lines[i] }
+      last_old = old_lines.size - 1
+      last_new = new_lines.size - 1
+      last_old -= 1 and last_new -= 1 while last_old > first && last_new > first && old_lines[last_old] == new_lines[last_new]
+      ["--- deps/deps-graph.yml", "+++ generated", "@@ line #{first + 1} @@",
+       *old_lines[first..last_old].map { |l| "- #{l}" },
+       *new_lines[first..last_new].map { |l| "+ #{l}" }].join("\n")
     end
   end
 end
