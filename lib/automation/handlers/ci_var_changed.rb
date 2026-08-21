@@ -1,17 +1,16 @@
 ##[>] 🤖🤖
 module Automation
   module Handlers
-    # CiVarChanged answers iac's applied group variables with a content regen per consumer of each variable's producer.
+    # CiVarChanged answers applied group variables with a content regen per consumer of each variable's sources.
     module CiVarChanged
-      def self.call(event, graph:, producers:)
-        by_key = producers.values.to_h { |p| [p.var_key, p] }
+      def self.call(event, graph:)
         event.details['variables'].flat_map do |change|
-          producer = by_key[change['key']]
-          next [] unless producer
+          pins = graph.pins_for_var(change['key'])
+          next [] if pins.empty?
 
-          (graph.affected(producer.artifact) - [ReleasePublished::PIN_REPO]).map do |r|
-            RegenPipeline::Job.new(repo: r, producer: producer.name, tag: change['to'], prev: change['from'])
-          end
+          publishers = pins.map(&:repo)
+          consumers = pins.flat_map { |p| graph.affected(p.source) }.uniq.sort - publishers
+          consumers.map { |r| RegenPipeline::Job.new(repo: r, key: pins.first.key, tag: change['to'], prev: change['from']) }
         end
       end
     end

@@ -9,6 +9,8 @@ repositories:
     artifacts: []
   - repo: cross-repo/infra/iac
     artifacts:
+      - {name: ci-var/artifact-registry, type: ci-variable}
+      - {name: ci-var/prose-assets-ref, type: ci-variable}
       - {name: ci-var/ci-images-ref, type: ci-variable}
   - repo: cross-repo/infra/oci-images
     artifacts:
@@ -27,14 +29,15 @@ edges:
   cross-repo/infra/oci-images/ci-linux:
     - configs
     - cross-repo/infra/iac
+    - cross-repo/infra/iac/ci-var/ci-images-ref
     - cross-repo/infra/oci-images
   cross-repo/prose/assets/license:
     - configs
-    - cross-repo/infra/iac
+    - cross-repo/infra/iac/ci-var/prose-assets-ref
   cross-repo/prose/assets/repo-prose:
     - ai-sandbox/sandbox
     - cross-repo/automation
-    - cross-repo/infra/iac
+    - cross-repo/infra/iac/ci-var/prose-assets-ref
   go-modules/che:
     - ai-sandbox/sandbox
     - cross-repo/infra/oci-images/ci-linux

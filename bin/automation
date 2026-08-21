@@ -13,7 +13,7 @@ USAGE = <<~USAGE
   usage: automation dispatch [--event-file <json>] [--emit <yaml>] [--graph <yml>]
          automation graph affected|produces|consumes <vertex> [--graph <yml>]
          automation aggregate [--local <workspace>] [--out <yml>] [--check]
-         automation regen --repo <repo> --tag <vX.Y.Z> --producer <name> [--prev <tag>] [--workdir <dir>] [--dry-run]
+         automation regen --repo <repo> --key <PIN_KEY> --tag <vX.Y.Z> [--prev <tag>] [--workdir <dir>] [--dry-run]
          automation sweep [--group <group>] [--dry-run]
 USAGE
 
@@ -69,14 +69,14 @@ def regen(args)
   o = parse(args) do |p, opts|
     p.on('--repo REPO') { |v| opts[:repo] = v }
     p.on('--tag TAG') { |v| opts[:tag] = v }
-    p.on('--producer NAME') { |v| opts[:producer] = v }
+    p.on('--key KEY') { |v| opts[:key] = v }
     p.on('--prev TAG') { |v| opts[:prev] = v }
     p.on('--workdir DIR') { |v| opts[:workdir] = v }
     p.on('--dry-run') { opts[:dry_run] = true }
   end
-  abort USAGE unless o[:repo] && o[:tag] && o[:producer]
-  producer = Automation::PRODUCERS.fetch(o[:producer]) { abort "regen: unknown producer '#{o[:producer]}' (#{Automation::PRODUCERS.keys.join('|')})" }
-  Automation::RegenRunner.new(repo: o[:repo], producer: producer, tag: o[:tag], prev: o[:prev], workdir: o[:workdir],
+  abort USAGE unless o[:repo] && o[:tag] && o[:key]
+  abort "regen: --key must be a bare variable name like PROSE_ASSETS_REF, got #{o[:key].inspect}" unless o[:key].match?(/\A[A-Z][A-Z0-9_]*\z/)
+  Automation::RegenRunner.new(repo: o[:repo], key: o[:key], tag: o[:tag], prev: o[:prev], workdir: o[:workdir],
                               dry_run: o[:dry_run] || false, group: GROUP).run
 end
 

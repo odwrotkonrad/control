@@ -1,7 +1,6 @@
 ##[>] 🤖🤖
 require_relative 'automation/shell'
 require_relative 'automation/event'
-require_relative 'automation/producers'
 require_relative 'automation/graph'
 require_relative 'automation/regen_pipeline'
 require_relative 'automation/handlers/release_published'
@@ -19,9 +18,9 @@ module Automation
   }.freeze
 
   # Returns the child pipeline YAML answering +event+ over +graph+.
-  def self.dispatch(event, graph:, producers: PRODUCERS)
+  def self.dispatch(event, graph:)
     handler = HANDLERS.fetch(event.type)
-    jobs = handler.call(event, graph: graph, producers: producers)
+    jobs = handler.call(event, graph: graph)
     RegenPipeline.render(jobs, empty_reason: "#{event.type} #{event.summary}: no affected downstreams")
   end
 end
