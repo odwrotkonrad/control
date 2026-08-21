@@ -1,0 +1,98 @@
+#!/usr/bin/env ruby
+##[>] 🤖🤖
+require 'optparse'
+require_relative '../lib/automation'
+
+ROOT = File.expand_path('..', __dir__)
+GRAPH = File.join(ROOT, 'deps/deps-graph.yml')
+GROUP = 'konradodwrot'
+
+USAGE = <<~USAGE
+  usage: automation dispatch [--event-file <json>] [--emit <yaml>] [--graph <yml>]
+         automation graph affected|produces|consumes <vertex> [--graph <yml>]
+         automation aggregate [--local <workspace>] [--out <yml>] [--check]
+         automation regen --repo <repo> --tag <vX.Y.Z> --producer <name> [--prev <tag>] [--workdir <dir>] [--dry-run]
+         automation sweep [--group <group>] [--dry-run]
+USAGE
+
+def parse(args, &block)
+  opts = {}
+  OptionParser.new do |o|
+    o.banner = USAGE
+    block.call(o, opts)
+  end.parse!(args)
+  opts
+end
+
+def dispatch(args)
+  o = parse(args) do |p, opts|
+    p.on('--graph PATH') { |v| opts[:graph] = v }
+    p.on('--event-file PATH') { |v| opts[:event_file] = v }
+    p.on('--emit PATH') { |v| opts[:emit] = v }
+  end
+  json = o[:event_file] ? File.read(o[:event_file]) : ENV.fetch('AUTOMATION_EVENT') { abort 'AUTOMATION_EVENT is unset and no --event-file given' }
+  event = Automation::Event.parse(json)
+  yaml = Automation.dispatch(event, graph: Automation::Graph.load(o[:graph] || GRAPH))
+  return print(yaml) unless o[:emit]
+
+  File.write(o[:emit], yaml)
+  jobs = yaml.scan(/^regen:(\S+):$/).flatten
+  puts "#{event.type} #{event.summary}: wrote #{o[:emit]} (#{jobs.size} downstream(s): #{jobs.empty? ? 'none' : jobs.join(' ')})"
+end
+
+def graph(args)
+  o = parse(args) { |p, opts| p.on('--graph PATH') { |v| opts[:graph] = v } }
+  query, vertex = args
+  abort USAGE unless vertex
+  g = Automation::Graph.load(o[:graph] || GRAPH)
+  puts case query
+       when 'affected' then g.affected(vertex)
+       when 'produces' then g.produces(vertex)
+       when 'consumes' then g.consumes(vertex)
+       else abort USAGE
+       end
+end
+
+def aggregate(args)
+  o = parse(args) do |p, opts|
+    p.on('--local PATH') { |v| opts[:local] = v }
+    p.on('--out PATH') { |v| opts[:out] = v }
+    p.on('--check') { opts[:check] = true }
+  end
+  Automation::Aggregate.run(seed_file: File.join(ROOT, 'deps/seed-interfaces.yml'), graph_file: GRAPH,
+                            out: o[:out] || GRAPH, check: o[:check] || false, group: GROUP, local: o[:local])
+end
+
+def regen(args)
+  o = parse(args) do |p, opts|
+    p.on('--repo REPO') { |v| opts[:repo] = v }
+    p.on('--tag TAG') { |v| opts[:tag] = v }
+    p.on('--producer NAME') { |v| opts[:producer] = v }
+    p.on('--prev TAG') { |v| opts[:prev] = v }
+    p.on('--workdir DIR') { |v| opts[:workdir] = v }
+    p.on('--dry-run') { opts[:dry_run] = true }
+  end
+  abort USAGE unless o[:repo] && o[:tag] && o[:producer]
+  producer = Automation::PRODUCERS.fetch(o[:producer]) { abort "regen: unknown producer '#{o[:producer]}' (#{Automation::PRODUCERS.keys.join('|')})" }
+  Automation::RegenRunner.new(repo: o[:repo], producer: producer, tag: o[:tag], prev: o[:prev], workdir: o[:workdir],
+                              dry_run: o[:dry_run] || false, group: GROUP).run
+end
+
+def sweep(args)
+  o = parse(args) do |p, opts|
+    p.on('--group GROUP') { |v| opts[:group] = v }
+    p.on('--dry-run') { opts[:dry_run] = true }
+  end
+  Automation::Sweep.run(group: o[:group] || GROUP, dry_run: o[:dry_run] || false)
+end
+
+command, *rest = ARGV
+case command
+when 'dispatch' then dispatch(rest)
+when 'graph' then graph(rest)
+when 'aggregate' then aggregate(rest)
+when 'regen' then regen(rest)
+when 'sweep' then sweep(rest)
+else abort USAGE
+end
+##[<] 🤖🤖
