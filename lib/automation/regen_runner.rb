@@ -7,9 +7,9 @@ module Automation
   class RegenRunner
     RUNNING = %w[running pending created waiting_for_resource preparing scheduled].freeze
 
-    def initialize(repo:, producer:, tag:, prev: nil, workdir: nil, dry_run: false, group: 'konradodwrot')
+    def initialize(repo:, key:, tag:, prev: nil, workdir: nil, dry_run: false, group: 'konradodwrot')
       @repo = repo
-      @producer = producer
+      @key = key
       @tag = tag
       @prev = prev
       @workdir = workdir
@@ -21,13 +21,13 @@ module Automation
     def run
       abort 'regen --dry-run needs --workdir <checkout> (no clone in dry-run)' if @dry_run && @workdir.nil?
       clone unless @workdir
-      plan = Regen.plan(repo: @repo, producer: @producer, tag: @tag, prev: @prev, files: pin_files)
+      plan = Regen.plan(repo: @repo, key: @key, tag: @tag, prev: @prev, files: pin_files)
       return puts(plan.message) if plan.is_a?(Regen::Skip)
       return print_plan(plan) if @dry_run
 
       plan.render_env.each { |k, v| ENV[k] = v }
       close_stale_mrs(plan)
-      plan.pin_files.each { |f| File.write(path(f), Regen.rewrite_pin(File.read(path(f)), @producer, @tag)) }
+      plan.pin_files.each { |f| File.write(path(f), Regen.rewrite_pin(File.read(path(f)), plan)) }
       render
       git('checkout', '-b', plan.branch)
       git('add', '-A')
@@ -51,7 +51,7 @@ module Automation
 
     def clone
       @workdir = File.join(Dir.mktmpdir, File.basename(@repo))
-      Shell.run('git', 'clone', '--depth', '1', "https://control-maintainer:#{ENV.fetch('CONTROL_GITLAB_TOKEN')}@gitlab.com/#{@group}/#{@repo}.git", @workdir)
+      Shell.run_network('git', 'clone', '--depth', '1', "https://control-maintainer:#{ENV.fetch('CONTROL_GITLAB_TOKEN')}@gitlab.com/#{@group}/#{@repo}.git", @workdir)
     end
 
     def pin_files
@@ -97,9 +97,9 @@ module Automation
     def push(plan)
       if Shell.ok?('git', 'ls-remote', '--exit-code', '--heads', 'origin', plan.branch, chdir: @workdir)
         dropped = Gitlab.api("projects/#{@project}/repository/branches/#{CGI.escape(plan.branch)}", method: 'DELETE', allow_failure: true)
-        puts "#{@repo}: #{dropped ? 'dropped stale branch' : 'could not drop stale branch, push may be refused:'} #{plan.branch}"
+        puts "#{@repo}: #{dropped ? 'dropped' : 'could not drop'} stale branch #{plan.branch}, pushing over it"
       end
-      git('push', '-u', 'origin', plan.branch)
+      Shell.run_network('git', 'push', '-u', '--force', 'origin', plan.branch, chdir: @workdir)
     end
 
     def open_mr(plan)

@@ -4,7 +4,7 @@ require 'json'
 module Automation
   # RegenPipeline renders regen jobs as the child pipeline YAML regen-fan-out runs.
   module RegenPipeline
-    Job = Struct.new(:repo, :producer, :tag, :prev, keyword_init: true)
+    Job = Struct.new(:repo, :key, :tag, :prev, keyword_init: true)
 
     IMAGE = '$ARTIFACT_REGISTRY/ci-linux:$CI_IMAGES_REF'
     RUNNER_TAG = 'gke-linux-amd64-small'
@@ -22,7 +22,7 @@ module Automation
     end
 
     def self.regen(job)
-      script = "bin/automation regen --repo #{job.repo} --tag #{job.tag} --producer #{job.producer}"
+      script = "bin/automation regen --repo #{job.repo} --key #{job.key} --tag #{job.tag}"
       script += " --prev #{job.prev}" if job.prev
       <<~YAML
         regen:#{job.repo}:

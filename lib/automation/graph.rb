@@ -1,11 +1,12 @@
 ##[>] 🤖🤖
 require 'yaml'
+require_relative 'pin'
 
 module Automation
-  # Graph answers consumer and producer queries over deps/deps-graph.yml.
+  # Graph answers consumer, producer and pin queries over deps/deps-graph.yml.
   class Graph
     def self.load(path)
-      new(YAML.safe_load(File.read(path, encoding: "UTF-8")))
+      new(YAML.safe_load(File.read(path, encoding: 'UTF-8')))
     end
 
     def initialize(doc)
@@ -36,6 +37,24 @@ module Automation
         .reject { |r| r == vertex || within?(vertex, r) }
         .uniq
         .sort
+    end
+
+    # Every ci-var artifact an upstream vertex lands in, one Pin per edge.
+    def pins
+      @edges.flat_map do |source, downs|
+        downs.select { |v| Pin.artifact?(v) }.map do |v|
+          repo = vertex_repo(v)
+          Pin.new(repo: repo, artifact: v.delete_prefix("#{repo}/"), source: source)
+        end
+      end
+    end
+
+    def pins_for_release(artifact)
+      pins.select { |p| within?(p.source, artifact) }
+    end
+
+    def pins_for_var(var_key)
+      pins.select { |p| p.var_key == var_key }
     end
 
     private

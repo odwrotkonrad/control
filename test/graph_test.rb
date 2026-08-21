@@ -28,6 +28,23 @@ class GraphTest < Minitest::Test
     assert_equal [], @graph.produces('configs')
   end
 
+  def test_pins_come_from_edges_into_ci_var_artifacts
+    pins = @graph.pins
+    assert_equal %w[cross-repo/infra/iac], pins.map(&:repo).uniq
+    assert_equal %w[GRP_KO_VAR_CI_IMAGES_REF GRP_KO_VAR_PROSE_ASSETS_REF GRP_KO_VAR_PROSE_ASSETS_REF], pins.map(&:var_key).sort
+    assert_equal %w[cross-repo/prose/assets/license cross-repo/prose/assets/repo-prose], @graph.pins_for_release('cross-repo/prose/assets').map(&:source).sort
+    assert_equal %w[cross-repo/infra/oci-images/ci-linux], @graph.pins_for_release('cross-repo/infra/oci-images/ci-linux').map(&:source)
+    assert_equal [], @graph.pins_for_release('go-modules/che')
+    assert_equal %w[PROSE_ASSETS_REF], @graph.pins_for_var('GRP_KO_VAR_PROSE_ASSETS_REF').map(&:key).uniq
+    assert_equal [], @graph.pins_for_var('GRP_KO_VAR_ARTIFACT_REGISTRY')
+  end
+
+  def test_pin_derivations
+    assert_equal 'PROSE_ASSETS_REF', Automation::Pin.key_of('ci-var/prose-assets-ref')
+    assert_equal 'prose-assets', Automation::Pin.label_of('PROSE_ASSETS_REF')
+    assert_equal 'che-backup-auto-create', Automation::Pin.label_of('CHE_BACKUP_AUTO_CREATE')
+  end
+
   def test_consumes_matches_repo_and_its_artifacts
     assert_equal %w[cross-repo/prose/assets/repo-prose go-modules/che], @graph.consumes('ai-sandbox')
     assert_equal %w[cross-repo/infra/oci-images/ci-linux go-modules/che], @graph.consumes('cross-repo/infra/oci-images')

@@ -9,28 +9,23 @@ class DispatchTest < Minitest::Test
     @graph = Automation::Graph.load("#{FIXTURE}/graph.yml")
   end
 
-  def dispatch(name, producers: Automation::PRODUCERS)
+  def dispatch(name)
     event = Automation::Event.parse(File.read("#{FIXTURE}/#{name}.json"))
-    Automation.dispatch(event, graph: @graph, producers: producers)
+    Automation.dispatch(event, graph: @graph)
   end
 
-  def test_release_published_pins_iac_only
+  def test_release_published_pins_the_publishing_repo_only
     assert_equal File.read("#{FIXTURE}/release-published.yml"), dispatch('release-published')
   end
 
-  def test_release_published_without_group_var_regenerates_consumers
-    producers = { 'prose-assets' => Automation::Producer.new(name: 'prose-assets', var_key: nil, artifact: 'cross-repo/prose/assets') }
-    yaml = dispatch('release-published', producers: producers)
-    assert_equal %w[ai-sandbox configs cross-repo/automation cross-repo/infra/iac], yaml.scan(/^regen:(\S+):$/).flatten
-  end
-
-  def test_release_published_unknown_producer_raises
-    json = File.read("#{FIXTURE}/release-published.json").sub('prose-assets', 'nobody')
+  def test_release_published_without_a_pin_in_the_graph_raises
+    json = File.read("#{FIXTURE}/release-published.json").gsub('cross-repo/prose/assets', 'go-modules/che')
     event = Automation::Event.parse(json)
-    assert_raises(ArgumentError) { Automation.dispatch(event, graph: @graph) }
+    err = assert_raises(ArgumentError) { Automation.dispatch(event, graph: @graph) }
+    assert_match(/no ci-var artifact.*go-modules\/che/, err.message)
   end
 
-  def test_ci_var_changed_regenerates_consumers_at_the_new_value_and_skips_iac_and_unknown_keys
+  def test_ci_var_changed_regenerates_consumers_of_every_source_at_the_new_value_and_skips_publisher_and_unknown_keys
     assert_equal File.read("#{FIXTURE}/ci-var-changed.yml"), dispatch('ci-var-changed')
   end
 

@@ -1,25 +1,31 @@
 ##[>] 🤖🤖
+require_relative 'pin'
+
 module Automation
   # Regen plans one downstream regen: which pin moves, how the bump reads, what the MR says.
   module Regen
     PIN_GLOB = '*.tfvars'
     SEMVER = /(latest|v?\d+\.\d+\.\d+)/
 
-    Plan = Struct.new(:repo, :producer, :tag, :prev, :content_only, :pin_files, :old, :shown_tag, :bump, keyword_init: true) do
+    Plan = Struct.new(:repo, :key, :tag, :prev, :content_only, :pin_files, :old, :shown_tag, :bump, keyword_init: true) do
+      def label
+        Pin.label_of(key)
+      end
+
       def scope
-        content_only ? 'docs-gen' : producer.name
+        content_only ? 'docs-gen' : label
       end
 
       def branch
-        content_only ? "docs-gen-#{producer.name}-#{shown_tag}" : "#{producer.name}-#{shown_tag}"
+        content_only ? "docs-gen-#{label}-#{shown_tag}" : "#{label}-#{shown_tag}"
       end
 
       def title
-        content_only ? "[automation] chore(docs-gen): render at #{producer.name} #{shown_tag}" : "[automation] chore(#{producer.name}): #{old} → #{shown_tag}"
+        content_only ? "[automation] chore(docs-gen): render at #{label} #{shown_tag}" : "[automation] chore(#{label}): #{old} → #{shown_tag}"
       end
 
       def body
-        content_only ? "Automated docs regen: rendered at #{producer.name} #{shown_tag}." : "Automated #{producer.name} regen: #{old} → #{shown_tag} (#{bump} bump)."
+        content_only ? "Automated docs regen: rendered at #{label} #{shown_tag}." : "Automated #{label} regen: #{old} → #{shown_tag} (#{bump} bump)."
       end
 
       def auto_merge?
@@ -27,7 +33,11 @@ module Automation
       end
 
       def render_env
-        producer.env_var ? { producer.env_var => tag } : {}
+        { key => tag }
+      end
+
+      def pin_written
+        old.match?(/\A\d/) ? tag.delete_prefix('v') : tag
       end
 
       def stale_mr?(title)
@@ -37,24 +47,22 @@ module Automation
 
     Skip = Struct.new(:message)
 
-    def self.pin_pattern(producer)
-      /(#{Regexp.escape(producer.pin_key)}\s*=\s*")#{SEMVER}"/
+    def self.pin_pattern(key)
+      /(#{Regexp.escape(key)}\s*=\s*")#{SEMVER}"/
     end
 
-    def self.plan(repo:, producer:, tag:, files:, prev: nil)
-      pattern = pin_pattern(producer)
+    def self.plan(repo:, key:, tag:, files:, prev: nil)
+      pattern = pin_pattern(key)
       pin_files = files.select { |_, content| content.match?(pattern) }.keys
       if pin_files.empty?
-        return Skip.new("#{repo}: no #{producer.name} pin file, nothing to regen") unless producer.env_var
-
-        return Plan.new(repo: repo, producer: producer, tag: tag, prev: prev, content_only: true, pin_files: [],
+        return Plan.new(repo: repo, key: key, tag: tag, prev: prev, content_only: true, pin_files: [],
                         old: prev || 'none', shown_tag: tag, bump: 'patch')
       end
 
       old = files.fetch(pin_files.first)[pattern, 2]
       return Skip.new("#{repo}: already pinned to #{shown(old, tag)}") if old.delete_prefix('v') == tag.delete_prefix('v')
 
-      Plan.new(repo: repo, producer: producer, tag: tag, prev: prev, content_only: false, pin_files: pin_files,
+      Plan.new(repo: repo, key: key, tag: tag, prev: prev, content_only: false, pin_files: pin_files,
                old: old, shown_tag: shown(old, tag), bump: bump(old, tag))
     end
 
@@ -74,8 +82,8 @@ module Automation
       'patch'
     end
 
-    def self.rewrite_pin(content, producer, tag)
-      content.gsub(pin_pattern(producer)) { "#{Regexp.last_match(1)}#{producer.pin_written(tag)}\"" }
+    def self.rewrite_pin(content, plan)
+      content.gsub(pin_pattern(plan.key)) { "#{Regexp.last_match(1)}#{plan.pin_written}\"" }
     end
   end
 end
