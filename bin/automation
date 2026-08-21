@@ -8,6 +8,7 @@ require_relative '../lib/automation'
 ROOT = File.expand_path('..', __dir__)
 GRAPH = File.join(ROOT, 'deps/deps-graph.yml')
 GROUP = 'konradodwrot'
+OWN_REPO = 'cross-repo/automation'
 
 USAGE = <<~USAGE
   usage: automation dispatch [--event-file <json>] [--emit <yaml>] [--graph <yml>]
@@ -62,7 +63,8 @@ def aggregate(args)
     p.on('--check') { opts[:check] = true }
   end
   Automation::Aggregate.run(seed_file: File.join(ROOT, 'deps/seed-interfaces.yml'), graph_file: GRAPH,
-                            out: o[:out] || GRAPH, check: o[:check] || false, group: GROUP, local: o[:local])
+                            out: o[:out] || GRAPH, check: o[:check] || false, group: GROUP, local: o[:local],
+                            own: { repo: OWN_REPO, path: File.join(ROOT, Automation::Aggregate::IFACE_PATH) })
 end
 
 def regen(args)
