@@ -38,6 +38,8 @@ variables:
   CI_IMAGE: $ARTIFACT_REGISTRY/ci-linux:$CI_IMAGES_REF
 
 validate-pre-commit-all:
+  tags:
+    - gke-linux-amd64-small
   stage: validate
   image: $CI_IMAGE
   rules:
@@ -49,6 +51,8 @@ validate-pre-commit-all:
     - git diff --exit-code HEAD
 
 validate-deps-graph:
+  tags:
+    - gke-linux-amd64-small
   stage: validate
   image: $CI_IMAGE
   rules:
@@ -59,6 +63,8 @@ validate-deps-graph:
     - make aggregate-check
 
 verify-prose-release:
+  tags:
+    - gke-linux-amd64-small
   stage: verify
   image: $CI_IMAGE
   rules:
@@ -86,6 +92,8 @@ regen-fan-out:
 #   pin a version instead of tracking a moving branch. tag only, no release object: nothing here ships
 #   an artifact
 tag-mint:
+  tags:
+    - gke-linux-amd64-small
   stage: release
   image: $CI_IMAGE
   rules:
