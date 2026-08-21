@@ -88,13 +88,14 @@ module Automation
       res.is_a?(Net::HTTPSuccess) ? res.body.force_encoding("UTF-8") : nil
     end
 
-    def self.run(seed_file:, graph_file:, out:, check:, group:, local: nil)
+    def self.run(seed_file:, graph_file:, out:, check:, group:, local: nil, own: nil)
       seeds = YAML.safe_load(File.read(seed_file, encoding: "UTF-8")).fetch('repos')
       candidates = (seeds.keys + (local ? declared_local(local) : declared_remote(group))).uniq.sort
       declared = candidates.to_h do |repo|
         body = local ? (File.read(File.join(local, repo, IFACE_PATH), encoding: "UTF-8") if File.file?(File.join(local, repo, IFACE_PATH))) : fetch_remote(group, repo)
         [repo, body]
       end.compact.transform_values { |body| YAML.safe_load(body) }.reject { |_, v| v.nil? }
+      declared[own[:repo]] = YAML.safe_load(File.read(own[:path], encoding: 'UTF-8')) if own && File.file?(own[:path])
       repos = combine(seeds, declared)
 
       missing = inconsistencies(repos)

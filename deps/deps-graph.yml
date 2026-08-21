@@ -61,6 +61,7 @@ edges:
   configs/llm/claude:
     - ai-sandbox
     - ai-sandbox/sandbox
+    - cross-repo/automation
     - cross-repo/infra/iac
     - cross-repo/infra/oci-images
     - cross-repo/misc
