@@ -194,6 +194,11 @@ fi
 #[why] the ci container carries no git identity and the commit is the bot's, not a person's: name it from the
 #   job's own identity so the regen MR's authorship points back at the pipeline that opened it
 git -c user.name="${GITLAB_USER_NAME:-control-maintainer}" -c user.email="${GITLAB_USER_EMAIL:-control-maintainer@noreply.gitlab.com}" commit -m "$title"
+if git ls-remote --exit-code --heads origin $branch >/dev/null 2>&1; then
+  glab api -X DELETE "projects/$project_path/repository/branches/${branch//\//%2F}" >/dev/null \
+    && print "$repo: dropped stale branch $branch" \
+    || print "$repo: could not drop stale branch $branch, push may be refused"
+fi
 git push -u origin $branch
 #[why] --auto-merge on the create call, not a merge request afterwards: gitlab attaches the pipeline a
 #   second or two after the MR exists, so every after-the-fact arming attempt races that gap and gets
