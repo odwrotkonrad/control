@@ -5,7 +5,7 @@ module Automation
   # Event is one parsed AUTOMATION_EVENT: a known type, where it came from, the sender's details.
   Event = Struct.new(:type, :source, :details, keyword_init: true) do
     REQUIRED_DETAILS = {
-      'release.published' => %w[producer artifact tag],
+      'release.published' => %w[producer artifact],
       'ci-var.changed' => %w[variables]
     }.freeze
     SOURCE_FIELDS = %w[project pipeline ref sha].freeze
@@ -24,9 +24,13 @@ module Automation
       new(type: type, source: source, details: details)
     end
 
+    def tag
+      source['ref']
+    end
+
     def summary
       case type
-      when 'release.published' then "#{details['producer']} #{details['tag']}"
+      when 'release.published' then "#{details['producer']} #{tag}"
       when 'ci-var.changed' then details['variables'].map { |v| v['key'] }.join(',')
       end
     end

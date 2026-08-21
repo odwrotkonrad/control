@@ -1,4 +1,6 @@
 ##[>] 🤖🤖
+require 'json'
+
 module Automation
   # RegenPipeline renders regen jobs as the child pipeline YAML regen-fan-out runs.
   module RegenPipeline
@@ -31,7 +33,7 @@ module Automation
           variables:
             CONTROL_GITLAB_TOKEN: $REPO_VAR_CONTROL_GITLAB_TOKEN
           script:
-            - #{script}
+            - #{script.to_json}
       YAML
     end
 
@@ -43,7 +45,7 @@ module Automation
           tags:
             - #{RUNNER_TAG}
           script:
-            - echo '#{reason}'
+            - #{"echo #{reason.inspect}".to_json}
       YAML
     end
   end

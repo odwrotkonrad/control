@@ -9,7 +9,7 @@ module Automation
         d = event.details
         producer = producers.fetch(d['producer']) { raise ArgumentError, "unknown producer #{d['producer'].inspect}" }
         repos = producer.var_key ? [PIN_REPO] : graph.affected(d['artifact'])
-        repos.map { |r| RegenPipeline::Job.new(repo: r, producer: producer.name, tag: d['tag'], prev: d['prev']) }
+        repos.map { |r| RegenPipeline::Job.new(repo: r, producer: producer.name, tag: event.tag, prev: d['prev']) }
       end
     end
   end

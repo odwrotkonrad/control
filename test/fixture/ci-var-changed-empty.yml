@@ -8,4 +8,4 @@ no-op:
   tags:
     - gke-linux-amd64-small
   script:
-    - echo 'ci-var.changed : no affected downstreams'
+    - "echo \"ci-var.changed : no affected downstreams\""
