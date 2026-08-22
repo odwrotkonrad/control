@@ -87,6 +87,7 @@ edges:
     - cross-repo/prose/assets
     - cross-repo/prose/spec
     - go-modules
+    - notes
     - resume-md-pdf
   cross-repo/infra/iac/ci-var/che-backup-auto-create:
     - configs
@@ -102,6 +103,7 @@ edges:
     - cross-repo/prose/assets
     - cross-repo/prose/spec
     - go-modules
+    - notes
     - resume-md-pdf
   cross-repo/infra/iac/ci-var/enable-darwin-ci:
     - configs
@@ -133,6 +135,7 @@ edges:
     - cross-repo/infra/oci-images
     - cross-repo/prose/assets
     - cross-repo/prose/spec
+    - notes
     - resume-md-pdf
   cross-repo/prose/assets/doc-templates:
     - ai-sandbox
@@ -144,6 +147,7 @@ edges:
     - cross-repo/misc
     - cross-repo/prose/spec
     - go-modules
+    - notes
     - resume-md-pdf
   cross-repo/prose/assets/license:
     - ai-sandbox
@@ -155,6 +159,7 @@ edges:
     - cross-repo/misc
     - cross-repo/prose/spec
     - go-modules
+    - notes
     - resume-md-pdf
   cross-repo/prose/assets/repo-prose:
     - ai-sandbox
@@ -166,6 +171,7 @@ edges:
     - cross-repo/misc
     - cross-repo/prose/spec
     - go-modules
+    - notes
     - resume-md-pdf
   cross-repo/prose/assets/shared-prose:
     - cross-repo/infra/iac/ci-var/prose-assets-ref
@@ -174,6 +180,7 @@ edges:
     - cross-repo/infra/iac
     - cross-repo/infra/iac/ci-var/prose-spec-ref
     - cross-repo/misc
+    - notes
   cross-repo/prose/spec/repo-spec:
     - cross-repo/infra/iac/ci-var/prose-spec-ref
   go-modules/che:
