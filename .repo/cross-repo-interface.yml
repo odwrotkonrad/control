@@ -7,6 +7,7 @@ upstream:
   - cross-repo/prose/assets/license
   - cross-repo/misc/ci-scripts
   - cross-repo/infra/iac/ci-var/artifact-registry
+  - cross-repo/infra/iac/ci-var/configs-ref
   - cross-repo/infra/iac/ci-var/ci-images-ref
 downstream:
   - {name: deps-graph, type: dataset}
