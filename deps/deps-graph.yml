@@ -33,6 +33,8 @@ repositories:
   - repo: cross-repo/misc
     artifacts:
       - {name: ci-scripts, type: script}
+      - {name: ci-templates, type: ci-template}
+      - {name: che-profile-matrix-check, type: script}
   - repo: cross-repo/prose/assets
     artifacts:
       - {name: repo-prose, type: ai-prose}
@@ -173,17 +175,11 @@ edges:
   cross-repo/prose/assets/shared-prose:
     - cross-repo/infra/iac/ci-var/prose-assets-ref
   cross-repo/prose/spec/conventions-doc:
-    - ai-sandbox
     - configs
-    - cross-repo/automation
     - cross-repo/infra/iac
     - cross-repo/infra/iac/ci-var/prose-spec-ref
-    - cross-repo/infra/oci-images
     - cross-repo/misc
-    - cross-repo/prose/assets
-    - go-modules
     - notes
-    - resume-md-pdf
   cross-repo/prose/spec/repo-spec:
     - cross-repo/infra/iac/ci-var/prose-spec-ref
   go-modules/che:

@@ -70,4 +70,31 @@ class RegenTest < Minitest::Test
     refute p.stale_mr?('Xautomation. chore(prose-assets): fake')
   end
 end
+
+class BotIdentityTest < Minitest::Test
+  def identity_of(user) = Automation::RegenRunner.git_identity_of(user)
+
+  def test_a_real_bot_user_becomes_a_noreply_author
+    assert_equal ['cross-repo-bot', '42-cross-repo-bot@noreply.gitlab.com'],
+                 identity_of({ 'username' => 'cross-repo-bot', 'id' => 42 })
+  end
+
+  def test_an_empty_username_resolves_to_no_author
+    assert_nil identity_of({ 'username' => '', 'id' => 42 })
+  end
+
+  def test_a_zero_id_resolves_to_no_author
+    assert_nil identity_of({ 'username' => 'cross-repo-bot', 'id' => 0 })
+  end
+
+  def test_a_response_missing_either_field_resolves_to_no_author
+    assert_nil identity_of({ 'id' => 42 })
+    assert_nil identity_of({ 'username' => 'cross-repo-bot' })
+    assert_nil identity_of({})
+  end
+
+  def test_a_missing_response_resolves_to_no_author
+    assert_nil identity_of(nil)
+  end
+end
 ##[<] 🤖🤖
