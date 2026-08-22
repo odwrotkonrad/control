@@ -56,7 +56,9 @@ module Automation
       open_mr(plan)
       assign_reviewer(plan)
       comment(plan)
+      url = mr_url(plan)
       puts "#{@repo}: regen MR opened (#{plan.old} → #{plan.shown_tag}): #{plan.auto_merge? ? arm(plan) : 'major bump, awaiting human review'}"
+      puts "#{@repo}: #{url}"
     end
 
     private
@@ -132,14 +134,22 @@ module Automation
         puts('regen: mr create reported failure, checking whether the MR exists')
     end
 
+    def mr(plan)
+      @mr ||= Gitlab.api("projects/#{@project}/merge_requests?source_branch=#{plan.branch}&state=opened")&.first ||
+              abort("#{@repo}: no open MR for #{plan.branch}, create really did fail")
+    end
+
     def mr_iid(plan)
-      @mr_iid ||= Gitlab.api("projects/#{@project}/merge_requests?source_branch=#{plan.branch}&state=opened").dig(0, 'iid') ||
-                  abort("#{@repo}: no open MR for #{plan.branch}, create really did fail")
+      mr(plan)['iid']
+    end
+
+    def mr_url(plan)
+      mr(plan)['web_url']
     end
 
     def reviewer
       handle = ENV['AUTOMATION_REVIEWER'].to_s.strip
-      handle.empty? ? 'konradodwrot' : handle
+      handle.empty? ? 'odwrotkonrad' : handle
     end
 
     def reviewer_id
@@ -150,8 +160,11 @@ module Automation
       id = reviewer_id
       return puts("#{@repo}: no gitlab user for @#{reviewer}, MR left unassigned") unless id
 
-      Gitlab.put("projects/#{@project}/merge_requests/#{mr_iid(plan)}", { reviewer_ids: id }) ||
+      if Gitlab.put("projects/#{@project}/merge_requests/#{mr_iid(plan)}", { reviewer_ids: id })
+        puts("#{@repo}: assigned @#{reviewer} as reviewer")
+      else
         puts("#{@repo}: could not assign @#{reviewer} as reviewer, continuing")
+      end
     end
 
     def comment(plan)
