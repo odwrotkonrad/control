@@ -93,6 +93,8 @@ edges:
     - go-modules
     - notes
     - resume-md-pdf
+  cross-repo/infra/iac/ci-var/automation-ref:
+    - configs
   cross-repo/infra/iac/ci-var/che-backup-auto-create:
     - configs
   cross-repo/infra/iac/ci-var/che-packages-ref:
@@ -111,10 +113,17 @@ edges:
     - resume-md-pdf
   cross-repo/infra/iac/ci-var/configs-ref:
     - cross-repo/automation
+    - cross-repo/infra/oci-images
     - cross-repo/misc
+    - cross-repo/prose/assets
+    - cross-repo/prose/spec
+    - go-modules
+    - notes
   cross-repo/infra/iac/ci-var/enable-darwin-ci:
     - configs
     - go-modules
+  cross-repo/infra/iac/ci-var/iac-ref:
+    - cross-repo/infra/oci-images
   cross-repo/infra/iac/tf-lock:
     - cross-repo/infra/oci-images
   cross-repo/infra/oci-images/ci-linux:

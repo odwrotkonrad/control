@@ -15,6 +15,7 @@ regen:cross-repo/infra/iac:PROSE_ASSETS_REF:
   tags:
     - gke-linux-amd64-small
   variables:
-    CONTROL_GITLAB_TOKEN: $REPO_VAR_CONTROL_GITLAB_TOKEN
+    AUTOMATION_GITLAB_TOKEN: $REPO_VAR_AUTOMATION_GITLAB_TOKEN
+    AUTOMATION_REVIEWER: $REPO_VAR_AUTOMATION_REVIEWER
   script:
     - "bin/automation regen --repo cross-repo/infra/iac --key PROSE_ASSETS_REF --tag v0.0.45"

@@ -94,10 +94,10 @@ module Automation
 
     def self.get(url, job_token: true)
       req = Net::HTTP::Get.new(URI(url))
-      control = ENV['CONTROL_GITLAB_TOKEN'].to_s
+      automation = ENV['AUTOMATION_GITLAB_TOKEN'].to_s
       job = ENV['CI_JOB_TOKEN'].to_s
-      if !control.empty?
-        req['PRIVATE-TOKEN'] = control
+      if !automation.empty?
+        req['PRIVATE-TOKEN'] = automation
       elsif job_token && !job.empty?
         req['JOB-TOKEN'] = job
       end

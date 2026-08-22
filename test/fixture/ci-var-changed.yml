@@ -15,7 +15,8 @@ regen:ai-sandbox:PROSE_ASSETS_REF:
   tags:
     - gke-linux-amd64-small
   variables:
-    CONTROL_GITLAB_TOKEN: $REPO_VAR_CONTROL_GITLAB_TOKEN
+    AUTOMATION_GITLAB_TOKEN: $REPO_VAR_AUTOMATION_GITLAB_TOKEN
+    AUTOMATION_REVIEWER: $REPO_VAR_AUTOMATION_REVIEWER
   script:
     - "bin/automation regen --repo ai-sandbox --key PROSE_ASSETS_REF --tag v0.0.45 --prev v0.0.44"
 regen:configs:PROSE_ASSETS_REF:
@@ -24,7 +25,8 @@ regen:configs:PROSE_ASSETS_REF:
   tags:
     - gke-linux-amd64-small
   variables:
-    CONTROL_GITLAB_TOKEN: $REPO_VAR_CONTROL_GITLAB_TOKEN
+    AUTOMATION_GITLAB_TOKEN: $REPO_VAR_AUTOMATION_GITLAB_TOKEN
+    AUTOMATION_REVIEWER: $REPO_VAR_AUTOMATION_REVIEWER
   script:
     - "bin/automation regen --repo configs --key PROSE_ASSETS_REF --tag v0.0.45 --prev v0.0.44"
 regen:cross-repo/automation:PROSE_ASSETS_REF:
@@ -33,6 +35,7 @@ regen:cross-repo/automation:PROSE_ASSETS_REF:
   tags:
     - gke-linux-amd64-small
   variables:
-    CONTROL_GITLAB_TOKEN: $REPO_VAR_CONTROL_GITLAB_TOKEN
+    AUTOMATION_GITLAB_TOKEN: $REPO_VAR_AUTOMATION_GITLAB_TOKEN
+    AUTOMATION_REVIEWER: $REPO_VAR_AUTOMATION_REVIEWER
   script:
     - "bin/automation regen --repo cross-repo/automation --key PROSE_ASSETS_REF --tag v0.0.45 --prev v0.0.44"

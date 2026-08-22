@@ -38,7 +38,8 @@ module Automation
           tags:
             - #{RUNNER_TAG}
           variables:
-            CONTROL_GITLAB_TOKEN: $REPO_VAR_CONTROL_GITLAB_TOKEN
+            AUTOMATION_GITLAB_TOKEN: $REPO_VAR_AUTOMATION_GITLAB_TOKEN
+            AUTOMATION_REVIEWER: $REPO_VAR_AUTOMATION_REVIEWER
           script:
             - #{script.to_json}
       YAML

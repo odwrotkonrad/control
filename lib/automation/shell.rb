@@ -46,10 +46,10 @@ module Automation
     end
   end
 
-  # Gitlab calls the GitLab API through glab, authenticated as the cross-repo bot.
+  # Gitlab calls the GitLab API through glab, authenticated as the ko-automation bot.
   module Gitlab
     def self.bot_env
-      token = ENV['CONTROL_GITLAB_TOKEN']
+      token = ENV['AUTOMATION_GITLAB_TOKEN']
       token.to_s.empty? ? {} : { 'GITLAB_TOKEN' => token }
     end
 
