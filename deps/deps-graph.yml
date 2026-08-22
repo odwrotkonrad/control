@@ -25,6 +25,9 @@ repositories:
       - {name: ci-var/che-packages-ref, type: ci-variable}
       - {name: ci-var/che-backup-auto-create, type: ci-variable}
       - {name: ci-var/enable-darwin-ci, type: ci-variable}
+      - {name: ci-var/configs-ref, type: ci-variable}
+      - {name: ci-var/automation-ref, type: ci-variable}
+      - {name: ci-var/iac-ref, type: ci-variable}
   - repo: cross-repo/infra/oci-images
     artifacts:
       - {name: ci-linux, type: oci-image}
@@ -65,6 +68,7 @@ edges:
     - ai-sandbox/sandbox
     - cross-repo/automation
     - cross-repo/infra/iac
+    - cross-repo/infra/iac/ci-var/configs-ref
     - cross-repo/infra/oci-images
     - cross-repo/misc
     - cross-repo/prose/assets
@@ -76,6 +80,7 @@ edges:
     - cross-repo/infra/oci-images/dev-sandbox
   cross-repo/automation/workspace:
     - configs
+    - cross-repo/infra/iac/ci-var/automation-ref
   cross-repo/infra/iac/ci-var/artifact-registry:
     - ai-sandbox
     - che-packages
