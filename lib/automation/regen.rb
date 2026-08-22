@@ -32,6 +32,11 @@ module Automation
         bump != 'major'
       end
 
+      def comment_body(reviewer)
+        merge_note = auto_merge? ? 'Auto-merge armed.' : 'Auto-merge withheld, awaiting review.'
+        "@#{reviewer} #{body} #{merge_note}"
+      end
+
       def render_env
         { key => tag }
       end
@@ -84,6 +89,23 @@ module Automation
 
     def self.rewrite_pin(content, plan)
       content.gsub(pin_pattern(plan.key)) { "#{Regexp.last_match(1)}#{plan.pin_written}\"" }
+    end
+
+    def self.substantive_diff?(diff)
+      diff.to_s.split(/^@@[^\n]*\n/).drop(1).any? { |hunk| substantive_hunk?(hunk) }
+    end
+
+    def self.substantive_hunk?(hunk)
+      lines = hunk.lines(chomp: true)
+      deleted = lines.select { |l| l.start_with?('-') && !l.start_with?('---') }
+      added = lines.select { |l| l.start_with?('+') && !l.start_with?('+++') }
+      return true if deleted.size != added.size
+
+      deleted.zip(added).any? { |was, now| strip_versions(was[1..]) != strip_versions(now[1..]) }
+    end
+
+    def self.strip_versions(line)
+      line.gsub(/v?\d+\.\d+\.\d+/, '')
     end
   end
 end

@@ -7,6 +7,13 @@ module Automation
   class RegenRunner
     RUNNING = %w[running pending created waiting_for_resource preparing scheduled].freeze
 
+    # user_id_of maps a GET /users?username= body to the single matching id,
+    # nil when the response names no usable user.
+    def self.user_id_of(users)
+      id = users.is_a?(Array) ? users.dig(0, 'id').to_i : 0
+      id.positive? ? id : nil
+    end
+
     # git_identity_of maps a GET /user body to [name, email], nil when the
     # response names no usable author.
     def self.git_identity_of(user)
@@ -43,9 +50,12 @@ module Automation
       git('add', '-A')
       return puts("#{@repo}: nothing rendered differently at #{plan.shown_tag}, no MR") if Shell.ok?('git', 'diff', '--cached', '--quiet', chdir: @workdir)
 
+      @staged_diff = git('diff', '--cached', '--unified=0')
       commit(plan)
       push(plan)
       open_mr(plan)
+      assign_reviewer(plan)
+      comment(plan)
       puts "#{@repo}: regen MR opened (#{plan.old} → #{plan.shown_tag}): #{plan.auto_merge? ? arm(plan) : 'major bump, awaiting human review'}"
     end
 
@@ -61,7 +71,7 @@ module Automation
 
     def clone
       @workdir = File.join(Dir.mktmpdir, File.basename(@repo))
-      Shell.run_network('git', 'clone', '--depth', '1', "https://cross-repo-bot:#{ENV.fetch('CONTROL_GITLAB_TOKEN')}@gitlab.com/#{@group}/#{@repo}.git", @workdir)
+      Shell.run_network('git', 'clone', '--depth', '1', "https://ko-automation:#{ENV.fetch('AUTOMATION_GITLAB_TOKEN')}@gitlab.com/#{@group}/#{@repo}.git", @workdir)
     end
 
     def pin_files
@@ -122,11 +132,39 @@ module Automation
         puts('regen: mr create reported failure, checking whether the MR exists')
     end
 
-    def arm(plan)
-      iid = Gitlab.api("projects/#{@project}/merge_requests?source_branch=#{plan.branch}&state=opened").dig(0, 'iid')
-      abort "#{@repo}: no open MR for #{plan.branch}, create really did fail" unless iid
+    def mr_iid(plan)
+      @mr_iid ||= Gitlab.api("projects/#{@project}/merge_requests?source_branch=#{plan.branch}&state=opened").dig(0, 'iid') ||
+                  abort("#{@repo}: no open MR for #{plan.branch}, create really did fail")
+    end
 
-      mr_api = "projects/#{@project}/merge_requests/#{iid}"
+    def reviewer
+      handle = ENV['AUTOMATION_REVIEWER'].to_s.strip
+      handle.empty? ? 'konradodwrot' : handle
+    end
+
+    def reviewer_id
+      @reviewer_id ||= RegenRunner.user_id_of(Gitlab.api("users?username=#{reviewer}", allow_failure: true))
+    end
+
+    def assign_reviewer(plan)
+      id = reviewer_id
+      return puts("#{@repo}: no gitlab user for @#{reviewer}, MR left unassigned") unless id
+
+      Gitlab.put("projects/#{@project}/merge_requests/#{mr_iid(plan)}", { reviewer_ids: id }) ||
+        puts("#{@repo}: could not assign @#{reviewer} as reviewer, continuing")
+    end
+
+    def comment(plan)
+      return puts("#{@repo}: ref-only diff, no reviewer mention") unless Regen.substantive_diff?(@staged_diff)
+
+
+      Gitlab.api("projects/#{@project}/merge_requests/#{mr_iid(plan)}/notes",
+                 method: 'POST', form: { body: plan.comment_body(reviewer) }, allow_failure: true) ||
+        puts("#{@repo}: could not comment on the regen MR, continuing")
+    end
+
+    def arm(plan)
+      mr_api = "projects/#{@project}/merge_requests/#{mr_iid(plan)}"
       mr = Gitlab.api(mr_api)
       return 'auto-merge armed' if mr['merge_when_pipeline_succeeds']
 
