@@ -52,8 +52,7 @@ repositories:
       - {name: get-term-open-files-with, type: binary}
       - {name: lib, type: go-module}
   - repo: notes
-    artifacts:
-      - {name: purpose-doc, type: ai-prose}
+    artifacts: []
   - repo: resume-md-pdf
     artifacts:
       - {name: styled-resume-pdf, type: pdf}

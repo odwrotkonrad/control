@@ -80,8 +80,7 @@ repos:
       - cross-repo/infra/iac/ci-var/artifact-registry
       - cross-repo/infra/iac/ci-var/ci-images-ref
       - cross-repo/misc/ci-scripts
-    downstream:
-      - {name: purpose-doc, type: ai-prose}
+    downstream: []
   resume-md-pdf:
     upstream:
       - cross-repo/infra/oci-images/ci-linux
