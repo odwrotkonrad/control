@@ -6,8 +6,7 @@
 /assets/data/repo-structure.md
 /assets/docs-agents/purpose.md
 regen-pipeline.yml
-#[why] tagging scripts: authored in prose, rendered here by the ontoRepo profile
-/ci/semver-bump.zsh
-/ci/tag-mint.zsh
+#[why] shared render + tagging payload: authored in cross-repo/misc, rendered here, never tracked
+/shared/
 /.env
 ##[<] 🤖
