@@ -173,7 +173,7 @@ edges:
     - configs
     - cross-repo/infra/iac
     - cross-repo/infra/iac/ci-var/prose-spec-ref
-    - go-modules
+    - cross-repo/misc
   cross-repo/prose/spec/repo-spec:
     - cross-repo/infra/iac/ci-var/prose-spec-ref
   go-modules/che:
