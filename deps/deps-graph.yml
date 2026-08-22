@@ -118,6 +118,7 @@ edges:
     - cross-repo/prose/assets
     - cross-repo/prose/spec
     - go-modules
+    - notes
   cross-repo/infra/iac/ci-var/enable-darwin-ci:
     - configs
     - go-modules
