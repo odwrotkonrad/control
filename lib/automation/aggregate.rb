@@ -1,6 +1,8 @@
 ##[>] 🤖🤖
 require 'yaml'
 require 'net/http'
+require 'openssl'
+require 'json'
 require 'cgi'
 
 module Automation
@@ -63,6 +65,33 @@ module Automation
       Dir.glob(File.join(workspace, '**', IFACE_PATH)).map { |f| f.delete_prefix("#{workspace}/").delete_suffix("/#{IFACE_PATH}") }
     end
 
+    TRANSIENT_ERRORS = [Net::OpenTimeout, Net::ReadTimeout, Errno::ETIMEDOUT, Errno::ECONNRESET, Errno::ECONNREFUSED,
+                        Errno::EHOSTUNREACH, SocketError, EOFError, OpenSSL::SSL::SSLError, IOError].freeze
+    TRANSIENT_STATUSES = %w[429 500 502 503 504].freeze
+    RETRY_ATTEMPTS = 5
+    RETRY_BASE_PAUSE = 2
+
+    def self.transient_status?(code)
+      TRANSIENT_STATUSES.include?(code.to_s)
+    end
+
+    def self.with_retry(label, attempts: RETRY_ATTEMPTS, pause: RETRY_BASE_PAUSE, sleeper: method(:sleep))
+      (1..attempts).each do |attempt|
+        failure = begin
+          res = yield
+          return res unless res.is_a?(Net::HTTPResponse) && transient_status?(res.code)
+
+          "status #{res.code}"
+        rescue *TRANSIENT_ERRORS => e
+          "#{e.class}: #{e.message}"
+        end
+        raise "#{label}: gave up after #{attempts} attempts, last failure: #{failure}" if attempt == attempts
+
+        warn "#{label}: #{failure}, attempt #{attempt}/#{attempts}, retrying"
+        sleeper.call(pause * (2**(attempt - 1)))
+      end
+    end
+
     def self.get(url, job_token: true)
       req = Net::HTTP::Get.new(URI(url))
       control = ENV['CONTROL_GITLAB_TOKEN'].to_s
@@ -72,12 +101,14 @@ module Automation
       elsif job_token && !job.empty?
         req['JOB-TOKEN'] = job
       end
-      Net::HTTP.start(req.uri.host, req.uri.port, use_ssl: true) { |http| http.request(req) }
+      with_retry("GET #{req.uri.path}") do
+        Net::HTTP.start(req.uri.host, req.uri.port, use_ssl: true, open_timeout: 10, read_timeout: 30) { |http| http.request(req) }
+      end
     end
 
     def self.declared_remote(group)
       res = get("#{API}/groups/#{group}/projects?include_subgroups=true&per_page=100", job_token: false)
-      raise "group listing failed: #{res.code}" unless res.is_a?(Net::HTTPSuccess)
+      raise "group listing failed: #{res.code} #{res.body}" unless res.is_a?(Net::HTTPSuccess)
 
       JSON.parse(res.body).map { |p| p['path_with_namespace'].delete_prefix("#{group}/") }
     end
@@ -85,7 +116,10 @@ module Automation
     def self.fetch_remote(group, repo)
       project = CGI.escape("#{group}/#{repo}")
       res = get("#{API}/projects/#{project}/repository/files/#{CGI.escape(IFACE_PATH)}/raw?ref=main")
-      res.is_a?(Net::HTTPSuccess) ? res.body.force_encoding("UTF-8") : nil
+      return res.body.force_encoding("UTF-8") if res.is_a?(Net::HTTPSuccess)
+      return nil if res.is_a?(Net::HTTPNotFound)
+
+      raise "#{group}/#{repo} #{IFACE_PATH}: unexpected status #{res.code} #{res.body}"
     end
 
     def self.run(seed_file:, graph_file:, out:, check:, group:, local: nil, own: nil)
