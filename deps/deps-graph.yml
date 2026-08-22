@@ -111,6 +111,7 @@ edges:
     - resume-md-pdf
   cross-repo/infra/iac/ci-var/configs-ref:
     - cross-repo/automation
+    - cross-repo/misc
   cross-repo/infra/iac/ci-var/enable-darwin-ci:
     - configs
     - go-modules
