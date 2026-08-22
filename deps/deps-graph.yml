@@ -33,6 +33,8 @@ repositories:
   - repo: cross-repo/misc
     artifacts:
       - {name: ci-scripts, type: script}
+      - {name: ci-templates, type: ci-template}
+      - {name: che-profile-matrix-check, type: script}
   - repo: cross-repo/prose/assets
     artifacts:
       - {name: repo-prose, type: ai-prose}
@@ -50,7 +52,8 @@ repositories:
       - {name: get-term-open-files-with, type: binary}
       - {name: lib, type: go-module}
   - repo: notes
-    artifacts: []
+    artifacts:
+      - {name: purpose-doc, type: ai-prose}
   - repo: resume-md-pdf
     artifacts:
       - {name: styled-resume-pdf, type: pdf}
@@ -84,7 +87,6 @@ edges:
     - cross-repo/prose/assets
     - cross-repo/prose/spec
     - go-modules
-    - notes
     - resume-md-pdf
   cross-repo/infra/iac/ci-var/che-backup-auto-create:
     - configs
@@ -100,7 +102,6 @@ edges:
     - cross-repo/prose/assets
     - cross-repo/prose/spec
     - go-modules
-    - notes
     - resume-md-pdf
   cross-repo/infra/iac/ci-var/enable-darwin-ci:
     - configs
@@ -132,7 +133,6 @@ edges:
     - cross-repo/infra/oci-images
     - cross-repo/prose/assets
     - cross-repo/prose/spec
-    - notes
     - resume-md-pdf
   cross-repo/prose/assets/doc-templates:
     - ai-sandbox
@@ -144,7 +144,6 @@ edges:
     - cross-repo/misc
     - cross-repo/prose/spec
     - go-modules
-    - notes
     - resume-md-pdf
   cross-repo/prose/assets/license:
     - ai-sandbox
@@ -156,7 +155,6 @@ edges:
     - cross-repo/misc
     - cross-repo/prose/spec
     - go-modules
-    - notes
     - resume-md-pdf
   cross-repo/prose/assets/repo-prose:
     - ai-sandbox
@@ -168,22 +166,14 @@ edges:
     - cross-repo/misc
     - cross-repo/prose/spec
     - go-modules
-    - notes
     - resume-md-pdf
   cross-repo/prose/assets/shared-prose:
     - cross-repo/infra/iac/ci-var/prose-assets-ref
   cross-repo/prose/spec/conventions-doc:
-    - ai-sandbox
     - configs
-    - cross-repo/automation
     - cross-repo/infra/iac
     - cross-repo/infra/iac/ci-var/prose-spec-ref
-    - cross-repo/infra/oci-images
-    - cross-repo/misc
-    - cross-repo/prose/assets
     - go-modules
-    - notes
-    - resume-md-pdf
   cross-repo/prose/spec/repo-spec:
     - cross-repo/infra/iac/ci-var/prose-spec-ref
   go-modules/che:

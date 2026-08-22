@@ -7,6 +7,16 @@ module Automation
   class RegenRunner
     RUNNING = %w[running pending created waiting_for_resource preparing scheduled].freeze
 
+    # git_identity_of maps a GET /user body to [name, email], nil when the
+    # response names no usable author.
+    def self.git_identity_of(user)
+      username = user.is_a?(Hash) ? user['username'].to_s : ''
+      id = user.is_a?(Hash) ? user['id'].to_i : 0
+      return nil if username.empty? || id < 1
+
+      [username, "#{id}-#{username}@noreply.gitlab.com"]
+    end
+
     def initialize(repo:, key:, tag:, prev: nil, workdir: nil, dry_run: false, group: 'konradodwrot')
       @repo = repo
       @key = key
@@ -51,7 +61,7 @@ module Automation
 
     def clone
       @workdir = File.join(Dir.mktmpdir, File.basename(@repo))
-      Shell.run_network('git', 'clone', '--depth', '1', "https://control-maintainer:#{ENV.fetch('CONTROL_GITLAB_TOKEN')}@gitlab.com/#{@group}/#{@repo}.git", @workdir)
+      Shell.run_network('git', 'clone', '--depth', '1', "https://cross-repo-bot:#{ENV.fetch('CONTROL_GITLAB_TOKEN')}@gitlab.com/#{@group}/#{@repo}.git", @workdir)
     end
 
     def pin_files
@@ -88,9 +98,13 @@ module Automation
       Shell.run('make', target, chdir: @workdir)
     end
 
+    def bot_identity
+      @bot_identity ||= RegenRunner.git_identity_of(Gitlab.api('user')) ||
+                        abort('regen: GET user returned no bot identity, refusing to commit under an unknown author')
+    end
+
     def commit(plan)
-      name = ENV.fetch('GITLAB_USER_NAME', 'control-maintainer')
-      email = ENV.fetch('GITLAB_USER_EMAIL', 'control-maintainer@noreply.gitlab.com')
+      name, email = bot_identity
       git('-c', "user.name=#{name}", '-c', "user.email=#{email}", 'commit', '-m', plan.title)
     end
 

@@ -5,7 +5,6 @@ upstream:
   - cross-repo/prose/assets/repo-prose
   - cross-repo/prose/assets/doc-templates
   - cross-repo/prose/assets/license
-  - cross-repo/prose/spec/conventions-doc
   - cross-repo/misc/ci-scripts
   - cross-repo/infra/iac/ci-var/artifact-registry
   - cross-repo/infra/iac/ci-var/ci-images-ref
